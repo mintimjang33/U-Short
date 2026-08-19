@@ -1,0 +1,464 @@
+#!/usr/bin/env node
+/**
+ * 슈퍼쇼츠 클론 프로젝트 전용 MCP 서버.
+ * 프레시시즌 등 다른 프로젝트의 MCP 서버 패턴을 참고해서 만듦 — 그쪽의 핵심은 단순 테이블
+ * 조회(get_rows 등)가 아니라 create_blog_post처럼 "실제 작업을 한 번에 끝내는 도구"였음.
+ * 그래서 이 서버도 DB 조회/수정 도구뿐 아니라, Claude가 언제든 접속해서 사용자 대신
+ * 실제로 쇼츠를 만들어줄 수 있는 create_shorts 도구를 핵심으로 제공한다.
+ *
+ * create_shorts/retry_job은 Next.js 개발 서버(npm run dev)에 의존하지 않는다 —
+ * lib/pipeline.js의 runPipeline()을 이 프로세스가 직접 import해서 실행하기 때문에,
+ * Next 서버가 켜져 있지 않아도 동작한다 (렌더링에 필요한 @remotion/* 등은 전부
+ * 프로젝트 루트 node_modules에서 그대로 resolve됨 — Node의 상대경로 import는 파일 위치
+ * 기준으로 node_modules를 찾기 때문).
+ *
+ * 실행: node mcp-server/index.js (프로젝트 루트의 .env.local을 읽어서 접속)
+ * 등록: 프로젝트 루트(Downloads)의 .mcp.json에 stdio 서버로 등록되어 있음.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
+
+// 프로젝트 루트의 lib/*를 그대로 재사용한다 (중복 구현 안 함) — dotenv.config()가 먼저 실행돼서
+// 이 모듈들이 process.env를 읽을 때 이미 .env.local 값이 채워져 있다.
+const { getSupabaseServerClient } = await import('../lib/supabase.js');
+const { runPipeline } = await import('../lib/pipeline.js');
+const OPTIONS = await import('../lib/options.js');
+const { DEFAULT_CAPTION_PRESET_ID } = await import('../remotion/src/captionPresets.js');
+
+let supabase;
+try {
+  supabase = getSupabaseServerClient();
+} catch (err) {
+  console.error(`[supershorts-mcp] ${err.message}`);
+  process.exit(1);
+}
+
+const BUCKET = 'shorts';
+const TABLES = ['projects', 'jobs', 'templates'];
+const TABLE_SCHEMA = {
+  projects: {
+    columns:
+      'id, user_id, source_url, source_text, title_line1, title_line2, layout_id, content_template_id, title_style, caption_style, background, extra_info, options, created_at, updated_at',
+    note: '레이아웃(info/card), 자막 프리셋, 배경, 부가정보, 대본/음성 provider 등 새 프로젝트 화면에서 넣은 설정 전체.',
+  },
+  jobs: {
+    columns:
+      'id, project_id, status(queued/processing/completed/failed), stage, error_message, credits_used, video_url, idempotency_key, created_at, updated_at',
+    note: '프로젝트 1건을 실제로 파이프라인에 태운 실행 기록. 한 프로젝트에 여러 job(재시도 포함)이 있을 수 있음.',
+  },
+  templates: {
+    columns: 'id, user_id, name, layout_id, config(jsonb), created_at',
+    note: '템플릿 에디터에서 저장한 내 템플릿(제목/자막/배경 스타일 프리셋).',
+  },
+};
+
+function assertKnownTable(table) {
+  if (!TABLES.includes(table)) {
+    throw new Error(`알 수 없는 테이블: ${table} (사용 가능: ${TABLES.join(', ')})`);
+  }
+}
+
+function textResult(value) {
+  return { content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] };
+}
+
+function errorResult(err) {
+  return { content: [{ type: 'text', text: `에러: ${err.message || err}` }], isError: true };
+}
+
+async function fetchJobWithProject(jobId) {
+  const { data, error } = await supabase.from('jobs').select('*, projects(*)').eq('id', jobId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(`job을 찾을 수 없습니다: ${jobId}`);
+  return data;
+}
+
+const server = new McpServer(
+  { name: 'supershorts-clone', version: '0.2.0' },
+  { capabilities: { tools: {} } }
+);
+
+// ── 실제 작업 수행 도구 ──────────────────────────────────────────
+
+server.registerTool(
+  'create_shorts',
+  {
+    description:
+      '블로그 URL 또는 직접 대본으로 쇼츠 영상을 처음부터 끝까지(추출→대본→음성→자막→렌더링→업로드) 실제로 만든다. ' +
+      'Next.js 서버가 켜져 있지 않아도 이 도구 자체가 파이프라인을 실행한다. wait=true(기본)면 완료까지 기다렸다가 ' +
+      '영상 URL을 바로 돌려주고(보통 30초~2분 소요), wait=false면 job만 만들어두고 바로 반환하니 get_job_status로 나중에 확인한다.',
+    inputSchema: {
+      sourceUrl: z.string().optional().describe('블로그 글 URL (네이버블로그/티스토리 등)'),
+      sourceText: z.string().optional().describe('URL 대신 직접 줄 대본/원본 텍스트'),
+      planningMode: z.enum(['auto', 'direct']).optional().describe('direct면 sourceText를 그대로 쓰고 제목만 생성, 생략시 sourceText만 있으면 자동으로 direct'),
+      style: z.enum(['summary', 'hook', 'list']).optional().describe('기본 summary'),
+      outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional().describe('기본 original(원문유지)'),
+      lengthMode: z.enum(['shortform', 'longform']).optional().describe('기본 shortform'),
+      layoutId: z.enum(['info', 'card']).optional().describe('기본 info'),
+      captionPresetId: z.string().optional().describe('기본 existing-preset-bold-white-outline, list_options로 전체 목록 확인 가능'),
+      scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional().describe('기본 claude'),
+      voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional().describe('기본 fal'),
+      backgroundColor: z.string().optional().describe('기본 #0a0a0a'),
+      backgroundImageUrl: z.string().optional().describe('비우면 블로그 대표 이미지를 자동으로 씀'),
+      extraInfoText: z.string().optional().describe('좌상단에 계속 뜨는 워터마크 텍스트 (예: 채널명)'),
+      wait: z.boolean().optional().describe('기본 true'),
+    },
+  },
+  async (args) => {
+    try {
+      const {
+        sourceUrl,
+        sourceText,
+        planningMode,
+        style,
+        outputLanguage,
+        lengthMode,
+        layoutId,
+        captionPresetId,
+        scriptProvider,
+        voiceProvider,
+        backgroundColor,
+        backgroundImageUrl,
+        extraInfoText,
+        wait,
+      } = args;
+
+      if (!sourceUrl && !sourceText) {
+        throw new Error('sourceUrl 또는 sourceText 중 하나는 필요합니다.');
+      }
+
+      const options = {
+        planningMode: planningMode || (sourceText && !sourceUrl ? 'direct' : 'auto'),
+        style: style || 'summary',
+        outputLanguage: outputLanguage || 'original',
+        lengthMode: lengthMode || 'shortform',
+        scriptProvider: scriptProvider || 'claude',
+        voiceProvider: voiceProvider || 'fal',
+      };
+
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          source_url: sourceUrl || null,
+          source_text: sourceText || null,
+          layout_id: layoutId || 'info',
+          content_template_id: captionPresetId || DEFAULT_CAPTION_PRESET_ID,
+          background: { color: backgroundColor || '#0a0a0a', imageUrl: backgroundImageUrl || null },
+          extra_info: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
+          options,
+        })
+        .select()
+        .single();
+      if (projectError) throw new Error(`프로젝트 생성 실패: ${projectError.message}`);
+
+      const { data: job, error: jobError } = await supabase
+        .from('jobs')
+        .insert({ project_id: project.id, status: 'queued' })
+        .select()
+        .single();
+      if (jobError) throw new Error(`job 생성 실패: ${jobError.message}`);
+
+      if (wait === false) {
+        runPipeline({ projectId: project.id, jobId: job.id }).catch((err) =>
+          console.error('[create_shorts] 백그라운드 파이프라인 실패', err)
+        );
+        return textResult({
+          projectId: project.id,
+          jobId: job.id,
+          status: 'queued',
+          note: '백그라운드로 처리 중입니다. get_job_status(jobId)로 진행 상황을 확인하세요.',
+        });
+      }
+
+      await runPipeline({ projectId: project.id, jobId: job.id });
+
+      const finalJob = await fetchJobWithProject(job.id);
+      return textResult({
+        projectId: project.id,
+        jobId: job.id,
+        status: finalJob.status,
+        stage: finalJob.stage,
+        videoUrl: finalJob.video_url,
+        errorMessage: finalJob.error_message,
+        title: [finalJob.projects?.title_line1, finalJob.projects?.title_line2].filter(Boolean).join(' / '),
+      });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'retry_job',
+  {
+    description: '실패한(또는 완료된) job을 같은 프로젝트 설정으로 다시 실행한다. 이 서버가 파이프라인을 직접 돌리므로 Next 서버 없이도 동작한다.',
+    inputSchema: { jobId: z.string(), wait: z.boolean().optional().describe('기본 true') },
+  },
+  async ({ jobId, wait }) => {
+    try {
+      const existing = await fetchJobWithProject(jobId);
+
+      const { data: newJob, error: insertError } = await supabase
+        .from('jobs')
+        .insert({ project_id: existing.project_id, status: 'queued' })
+        .select()
+        .single();
+      if (insertError) throw new Error(insertError.message);
+
+      if (wait === false) {
+        runPipeline({ projectId: existing.project_id, jobId: newJob.id }).catch((err) =>
+          console.error('[retry_job] 백그라운드 파이프라인 실패', err)
+        );
+        return textResult({ newJobId: newJob.id, status: 'queued', note: '백그라운드로 처리 중' });
+      }
+
+      await runPipeline({ projectId: existing.project_id, jobId: newJob.id });
+      const finalJob = await fetchJobWithProject(newJob.id);
+      return textResult({
+        newJobId: newJob.id,
+        status: finalJob.status,
+        videoUrl: finalJob.video_url,
+        errorMessage: finalJob.error_message,
+      });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'get_job_status',
+  {
+    description: '특정 job의 현재 진행 상태(stage/status/에러/완성된 영상 URL)를 조회한다.',
+    inputSchema: { jobId: z.string() },
+  },
+  async ({ jobId }) => {
+    try {
+      const job = await fetchJobWithProject(jobId);
+      return textResult({
+        jobId: job.id,
+        status: job.status,
+        stage: job.stage,
+        errorMessage: job.error_message,
+        videoUrl: job.video_url,
+        creditsUsed: job.credits_used,
+        project: {
+          id: job.projects?.id,
+          title: [job.projects?.title_line1, job.projects?.title_line2].filter(Boolean).join(' / '),
+          sourceUrl: job.projects?.source_url,
+        },
+      });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'upload_asset',
+  {
+    description:
+      '로컬 이미지 파일 경로 또는 원격 이미지 URL을 Supabase Storage(shorts 버킷)에 올리고 공개 URL을 돌려준다. ' +
+      'create_shorts의 backgroundImageUrl로 바로 쓸 수 있다.',
+    inputSchema: { source: z.string().describe('로컬 파일 절대경로 또는 http(s) URL') },
+  },
+  async ({ source }) => {
+    try {
+      let buffer;
+      let ext = path.extname(source).replace('.', '') || 'png';
+      const contentTypeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
+
+      if (/^https?:\/\//i.test(source)) {
+        const res = await fetch(source);
+        if (!res.ok) throw new Error(`원격 이미지 다운로드 실패 (${res.status}): ${source}`);
+        buffer = Buffer.from(await res.arrayBuffer());
+        const urlExt = path.extname(new URL(source).pathname).replace('.', '');
+        if (urlExt) ext = urlExt;
+      } else {
+        if (!fs.existsSync(source)) throw new Error(`파일을 찾을 수 없습니다: ${source}`);
+        buffer = fs.readFileSync(source);
+      }
+
+      const storagePath = `uploads/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(storagePath, buffer, { contentType: contentTypeMap[ext.toLowerCase()] || 'application/octet-stream' });
+      if (error) throw new Error(`업로드 실패: ${error.message}`);
+
+      const { data } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
+      return textResult({ url: data.publicUrl });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'list_options',
+  {
+    description: 'create_shorts/upsert_row에 쓸 수 있는 유효한 값 목록(레이아웃, 자막 프리셋, provider, 스타일, 언어 등)을 보여준다.',
+    inputSchema: {},
+  },
+  async () =>
+    textResult({
+      layouts: OPTIONS.LAYOUTS,
+      captionPresets: OPTIONS.CAPTION_PRESET_LIST,
+      scriptProviders: OPTIONS.SCRIPT_PROVIDERS,
+      voiceProviders: OPTIONS.VOICE_PROVIDERS,
+      scriptStyles: OPTIONS.SCRIPT_STYLES,
+      outputLanguages: OPTIONS.OUTPUT_LANGUAGES,
+      lengthModes: OPTIONS.LENGTH_MODES,
+    })
+);
+
+// ── 범용 DB 조회/수정 도구 (프레시시즌 패턴) ──────────────────────
+
+server.registerTool(
+  'list_tables',
+  { description: '이 프로젝트 Supabase DB의 테이블 목록과 각 테이블의 컬럼/용도를 설명한다.', inputSchema: {} },
+  async () => textResult(TABLE_SCHEMA)
+);
+
+server.registerTool(
+  'get_rows',
+  {
+    description: 'projects/jobs/templates 테이블에서 행을 조회한다. filters는 { 컬럼: 값 } 형태의 단순 등호 조건.',
+    inputSchema: {
+      table: z.enum(TABLES),
+      filters: z.record(z.string(), z.any()).optional(),
+      limit: z.number().int().min(1).max(200).optional(),
+      orderBy: z.string().optional(),
+      ascending: z.boolean().optional(),
+    },
+  },
+  async ({ table, filters, limit, orderBy, ascending }) => {
+    try {
+      assertKnownTable(table);
+      let query = supabase.from(table).select('*');
+      for (const [key, value] of Object.entries(filters || {})) {
+        query = query.eq(key, value);
+      }
+      query = query.order(orderBy || 'created_at', { ascending: ascending ?? false }).limit(limit || 50);
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return textResult(data);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'upsert_row',
+  {
+    description:
+      'projects/jobs/templates 테이블에 행을 추가하거나(신규) id를 포함하면 업데이트한다. 실제 쇼츠 제작은 create_shorts를 쓰고, ' +
+      '이 도구는 세부 필드를 직접 고치고 싶을 때만 쓴다.',
+    inputSchema: { table: z.enum(TABLES), row: z.record(z.string(), z.any()) },
+  },
+  async ({ table, row }) => {
+    try {
+      assertKnownTable(table);
+      const { data, error } = await supabase.from(table).upsert(row).select().single();
+      if (error) throw new Error(error.message);
+      return textResult(data);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'delete_row',
+  {
+    description: 'projects/jobs/templates 테이블에서 id로 행 하나를 삭제한다. projects 삭제 시 연결된 jobs도 같이 삭제된다(FK cascade). Storage 파일은 안 지워지니 필요하면 따로 정리할 것.',
+    inputSchema: { table: z.enum(TABLES), id: z.string() },
+  },
+  async ({ table, id }) => {
+    try {
+      assertKnownTable(table);
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw new Error(error.message);
+      return textResult({ ok: true, table, id });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'run_sql',
+  {
+    description: '읽기전용(SELECT만) SQL을 직접 실행한다. JOIN 등 get_rows로 안 되는 복잡한 조회에 쓴다. INSERT/UPDATE/DELETE/DDL은 거부된다.',
+    inputSchema: { query: z.string() },
+  },
+  async ({ query }) => {
+    try {
+      const { data, error } = await supabase.rpc('exec_readonly_sql', { query });
+      if (error) throw new Error(error.message);
+      return textResult(data);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'list_projects_summary',
+  {
+    description: '모든 프로젝트를 최신순으로, 최근 job 상태와 함께 한눈에 보기 좋은 요약으로 반환한다.',
+    inputSchema: { limit: z.number().int().min(1).max(100).optional() },
+  },
+  async ({ limit }) => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(
+          'id, title_line1, source_url, layout_id, created_at, jobs(id, status, stage, error_message, video_url, credits_used, created_at)'
+        )
+        .order('created_at', { ascending: false })
+        .limit(limit || 30);
+      if (error) throw new Error(error.message);
+
+      const summary = (data || []).map((p) => {
+        const jobs = [...(p.jobs || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        const latest = jobs[0];
+        return {
+          projectId: p.id,
+          title: p.title_line1 || p.source_url || '(제목 없음)',
+          layout: p.layout_id,
+          status: latest?.status || 'no-job',
+          stage: latest?.stage,
+          error: latest?.error_message,
+          videoUrl: latest?.video_url,
+          jobCount: jobs.length,
+          createdAt: p.created_at,
+        };
+      });
+      return textResult(summary);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error('[supershorts-mcp] 서버 시작됨 (stdio) — create_shorts로 직접 쇼츠 제작 가능');
+}
+
+main().catch((err) => {
+  console.error('[supershorts-mcp] 서버 시작 실패:', err);
+  process.exit(1);
+});

@@ -1,0 +1,29 @@
+{
+  "name": "supershorts-clone",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test:extract": "node scripts/test-extract.js",
+    "test:captions": "node scripts/test-captions.js",
+    "test:render": "node scripts/test-render.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@mozilla/readability": "^0.5.0",
+    "@remotion/bundler": "4.0.512",
+    "@remotion/cli": "4.0.512",
+    "@remotion/player": "4.0.512",
+    "@remotion/renderer": "4.0.512",
+    "@supabase/supabase-js": "^2.45.4",
+    "cheerio": "^1.0.0",
+    "jsdom": "^25.0.1",
+    "next": "15.5.23",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.512"
+  }
+}
