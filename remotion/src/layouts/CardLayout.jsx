@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Img, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
 import { useCurrentCaption, useNowMs } from '../useCurrentCaption.js';
 
@@ -10,6 +10,7 @@ export const CardLayout = ({
   captions = [],
   captionPresetId,
   backgroundImageUrl,
+  backgroundVideoUrl,
   backgroundColor = '#111318',
   audioSrc,
   extraInfo = [],
@@ -41,7 +42,13 @@ export const CardLayout = ({
             boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
           }}
         >
-          {backgroundImageUrl ? (
+          {backgroundVideoUrl ? (
+            <Video
+              src={backgroundVideoUrl}
+              muted
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})` }}
+            />
+          ) : backgroundImageUrl ? (
             <Img
               src={backgroundImageUrl}
               style={{

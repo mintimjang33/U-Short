@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Img, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
 import { useCurrentCaption, useNowMs } from '../useCurrentCaption.js';
 
@@ -12,6 +12,7 @@ export const FullFocusedLayout = ({
   captions = [],
   captionPresetId,
   backgroundImageUrl,
+  backgroundVideoUrl,
   backgroundColor = '#0a0a0a',
   audioSrc,
   extraInfo = [],
@@ -31,7 +32,13 @@ export const FullFocusedLayout = ({
     <AbsoluteFill style={{ backgroundColor }}>
       {audioSrc ? <Audio src={audioSrc} /> : null}
 
-      {backgroundImageUrl ? (
+      {backgroundVideoUrl ? (
+        <Video
+          src={backgroundVideoUrl}
+          muted
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})` }}
+        />
+      ) : backgroundImageUrl ? (
         <Img
           src={backgroundImageUrl}
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})` }}

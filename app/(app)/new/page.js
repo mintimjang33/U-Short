@@ -56,6 +56,19 @@ export default function NewProjectPage() {
   const [savedTemplates, setSavedTemplates] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
+  // 2단계 흐름: 1) 소스/설정 입력 → 대본 생성  2) 생성된 대본 확인/수정 + 스톡영상 선택 → 최종 제출
+  const [step, setStep] = useState(1);
+  const [generatingScript, setGeneratingScript] = useState(false);
+  const [scriptError, setScriptError] = useState(null);
+  const [scriptTitleLine1, setScriptTitleLine1] = useState('');
+  const [scriptTitleLine2, setScriptTitleLine2] = useState('');
+  const [scriptNarration, setScriptNarration] = useState('');
+  const [extractedImages, setExtractedImages] = useState([]);
+  const [searchingStock, setSearchingStock] = useState(false);
+  const [stockKeywords, setStockKeywords] = useState([]);
+  const [stockVideos, setStockVideos] = useState([]);
+  const [selectedStockVideoId, setSelectedStockVideoId] = useState(null);
+
   useEffect(() => {
     fetch('/api/templates')
       .then((res) => res.json())
@@ -114,7 +127,28 @@ export default function NewProjectPage() {
     }
   }
 
-  async function handleSubmit(e) {
+  async function searchStockVideos(titleLine1, titleLine2, narration) {
+    setSearchingStock(true);
+    try {
+      const res = await fetch('/api/stock-media/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titleLine1, titleLine2, narration }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '스톡영상 검색 실패');
+      setStockKeywords(data.keywords || []);
+      setStockVideos(data.videos || []);
+    } catch (err) {
+      // 스톡영상은 부가 기능이라, 실패해도 대본 생성 자체는 막지 않고 조용히 빈 목록으로 둔다.
+      setStockKeywords([]);
+      setStockVideos([]);
+    } finally {
+      setSearchingStock(false);
+    }
+  }
+
+  async function handleGenerateScript(e) {
     e.preventDefault();
     if (sourceMode === 'link' && !sourceUrl.trim()) {
       setError('URL을 입력해주세요.');
@@ -124,16 +158,55 @@ export default function NewProjectPage() {
       setError('대본을 10자 이상 입력해주세요.');
       return;
     }
+    setGeneratingScript(true);
+    setError(null);
+    setScriptError(null);
+
+    try {
+      const res = await fetch('/api/generate-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceUrl: sourceMode === 'link' ? sourceUrl.trim() : null,
+          sourceText: sourceMode === 'manual' ? manualText.trim() : null,
+          style,
+          outputLanguage,
+          lengthMode,
+          scriptProvider,
+          planningMode: sourceMode === 'manual' ? 'direct' : 'auto',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '대본 생성에 실패했습니다.');
+
+      setScriptTitleLine1(data.titleLine1);
+      setScriptTitleLine2(data.titleLine2 || '');
+      setScriptNarration(data.narration);
+      setExtractedImages(data.images || []);
+      setStep(2);
+      searchStockVideos(data.titleLine1, data.titleLine2, data.narration);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGeneratingScript(false);
+    }
+  }
+
+  async function handleFinalSubmit(e) {
+    e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    const selectedStock = stockVideos.find((v) => v.id === selectedStockVideoId);
 
     try {
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sourceUrl: sourceMode === 'link' ? sourceUrl.trim() : null,
-          sourceText: sourceMode === 'manual' ? manualText.trim() : null,
+          // preGeneratedScript가 있으면 pipeline이 sourceText로 다시 대본을 만들지 않지만,
+          // /api/jobs는 sourceUrl/sourceText 중 하나가 없으면 요청 자체를 거부하므로 채워서 보낸다.
+          sourceText: scriptNarration,
           style,
           outputLanguage,
           lengthMode,
@@ -144,10 +217,14 @@ export default function NewProjectPage() {
           voice: voiceId || null,
           introEnabled,
           introTemplateId,
-          background: { color: backgroundColor, imageUrl: backgroundImageUrl || null, videoUrl: backgroundVideoUrl || null },
+          preGeneratedScript: { titleLine1: scriptTitleLine1, titleLine2: scriptTitleLine2, narration: scriptNarration },
+          background: {
+            color: backgroundColor,
+            imageUrl: selectedStock ? null : backgroundImageUrl || extractedImages[0] || null,
+            videoUrl: selectedStock ? selectedStock.videoUrl : backgroundVideoUrl || null,
+          },
           extraInfo: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
-          // 직접 작성한 대본은 AI가 다시 기획하지 않고 그대로 쓰도록 direct 모드로 보낸다.
-          planningMode: sourceMode === 'manual' ? 'direct' : 'auto',
+          planningMode: 'direct',
         }),
       });
       const data = await res.json();
@@ -168,7 +245,8 @@ export default function NewProjectPage() {
           : '이미 다듬어둔 대본이 있다면 그대로 붙여넣으세요. AI가 내용을 다시 쓰지 않고 제목만 만들어요.'}
       </p>
 
-      <form onSubmit={handleSubmit} className="card" style={{ maxWidth: 640 }}>
+      {step === 1 && (
+      <form onSubmit={handleGenerateScript} className="card" style={{ maxWidth: 640 }}>
         <div className="field">
           <label>소스</label>
           <div className="pill-group">
@@ -384,10 +462,98 @@ export default function NewProjectPage() {
 
         {error && <div style={{ color: '#fda4af', marginBottom: 16, fontSize: 13 }}>{error}</div>}
 
-        <button type="submit" className="primary-btn" disabled={submitting}>
-          {submitting ? '제작 요청 중...' : '쇼츠 만들기'}
+        <button type="submit" className="primary-btn" disabled={generatingScript}>
+          {generatingScript ? '대본 생성 중...' : '대본 생성하기'}
         </button>
       </form>
+      )}
+
+      {step === 2 && (
+        <form onSubmit={handleFinalSubmit} className="card" style={{ maxWidth: 640 }}>
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            style={{ background: 'none', border: 'none', color: '#9c9cb5', fontSize: 13, cursor: 'pointer', padding: 0, marginBottom: 16 }}
+          >
+            ← 설정으로 돌아가기
+          </button>
+
+          <div className="field">
+            <label>제목 (수정 가능)</label>
+            <input type="text" value={scriptTitleLine1} onChange={(e) => setScriptTitleLine1(e.target.value)} style={{ marginBottom: 8 }} />
+            <input type="text" value={scriptTitleLine2} onChange={(e) => setScriptTitleLine2(e.target.value)} />
+          </div>
+
+          <div className="field">
+            <label>내레이션 (수정 가능)</label>
+            <textarea rows={6} value={scriptNarration} onChange={(e) => setScriptNarration(e.target.value)} />
+            <div className="field-hint">{scriptNarration.trim().length}자</div>
+          </div>
+
+          <div className="field">
+            <label>대본에 맞는 스톡영상 (선택)</label>
+            {searchingStock && <div className="field-hint">스톡영상을 찾는 중...</div>}
+            {!searchingStock && stockVideos.length === 0 && (
+              <div className="field-hint">추천 영상을 찾지 못했어요. 배경 이미지/영상을 직접 업로드해주세요.</div>
+            )}
+            {!searchingStock && stockVideos.length > 0 && (
+              <>
+                <div className="field-hint" style={{ marginBottom: 8 }}>검색 키워드: {stockKeywords.join(', ')}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10 }}>
+                  {stockVideos.map((v) => (
+                    <button
+                      type="button"
+                      key={v.id}
+                      onClick={() => setSelectedStockVideoId(selectedStockVideoId === v.id ? null : v.id)}
+                      style={{
+                        padding: 0,
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        border: selectedStockVideoId === v.id ? '3px solid #a78bfa' : '1px solid #2a2a3c',
+                        cursor: 'pointer',
+                        background: '#000',
+                        aspectRatio: '9 / 16',
+                        position: 'relative',
+                      }}
+                    >
+                      <img src={v.thumbnail} alt={v.keyword} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <span style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 10, color: '#fff', background: 'rgba(0,0,0,0.6)', padding: '2px 6px', borderRadius: 6 }}>
+                        {v.keyword}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <button type="button" onClick={() => searchStockVideos(scriptTitleLine1, scriptTitleLine2, scriptNarration)} style={{ marginTop: 8, fontSize: 12, color: '#9c9cb5', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  다시 찾기
+                </button>
+              </>
+            )}
+          </div>
+
+          {!selectedStockVideoId && (
+            <div className="field">
+              <label>또는 직접 배경 이미지 업로드 (선택, 안 넣으면 대표 이미지를 자동으로 씀)</label>
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFileUpload} />
+              {uploading && <div className="field-hint">업로드 중...</div>}
+              {uploadError && <div className="field-hint" style={{ color: '#fda4af' }}>{uploadError}</div>}
+              {backgroundImageUrl && (
+                <div className="field-hint">
+                  업로드됨: <a href={backgroundImageUrl} target="_blank" rel="noreferrer">미리보기</a>{' '}
+                  <button type="button" onClick={() => setBackgroundImageUrl('')} style={{ marginLeft: 8 }}>
+                    제거
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {error && <div style={{ color: '#fda4af', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+
+          <button type="submit" className="primary-btn" disabled={submitting}>
+            {submitting ? '제작 요청 중...' : '이대로 쇼츠 만들기'}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

@@ -34,6 +34,9 @@ export const POST = withApiErrorHandling(async (request) => {
     introEnabled: body.introEnabled ?? defaults.intro_enabled ?? false,
     introTemplateId: body.introTemplateId || defaults.intro_template_id || null,
     introDisplayOnly: body.introDisplayOnly ?? true,
+    // /new 페이지의 "대본 먼저 생성 → 확인 → 스톡영상 선택 → 최종 제출" 흐름에서 이미 확정된
+    // 대본이 있으면 그대로 넘겨받아서, pipeline이 다시 AI를 호출하지 않고 그 값을 그대로 쓴다.
+    preGeneratedScript: body.preGeneratedScript || null,
   };
 
   const { data: project, error: projectError } = await supabase
