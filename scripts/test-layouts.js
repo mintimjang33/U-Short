@@ -29,7 +29,7 @@ for (const { compositionId, title, captions } of cases) {
       title,
       captions,
       captionPresetId: 'existing-preset-pink-rounded',
-      backgroundImageUrl: 'https://picsum.photos/1080/1920',
+      backgroundImageUrl: 'https://picsum.photos/seed/ushort-test-fixed/1080/1920',
       backgroundColor: '#0a0a0a',
       audioSrc: null,
       durationMs: 3000,
