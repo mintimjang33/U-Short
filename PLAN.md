@@ -153,11 +153,32 @@ Node의 상대경로 import는 파일 위치 기준으로 node_modules를 찾으
         └── upload/route.js
 ```
 
+## 로그인 / 관리자 / 약관 / Vercel 배포 (2026-08-20 추가)
+
+사용자가 "슈퍼파인더처럼 나중에 판매용으로도 키울 거니, 데모 말고 처음부터 다 구현해두자"고 요청해서 진행함.
+
+- **로그인**: Supabase Auth 이메일/비번 + 구글 OAuth 실제 구현·검증 완료 (`lib/supabaseBrowser.js`, `lib/supabaseServerAuth.js`, `middleware.js`, `app/login/page.js`, `app/auth/callback/route.js`). 미들웨어가 비로그인 접근을 `/login`으로 리다이렉트(`/login`, `/auth/callback`, `/policy/*`, `/api/*`는 예외).
+  - 구글 OAuth: Google Cloud Console에서 OAuth 클라이언트 발급 + Supabase Auth Providers에 Client ID/Secret 등록까지 완료, 브라우저로 실제 구글 로그인 화면까지 리다이렉트되는 것 확인함(계정 로그인 자체는 사용자 개인 계정이라 미완주).
+- **관리자 페이지**: `app/(app)/admin/page.js` + `app/api/admin-users/route.js`. `.env.local`의 `OWNER_EMAIL`(mintimjang33@gmail.com)로 로그인해야만 보이고, `supabase.auth.admin.listUsers()`로 가입회원 목록 조회.
+- **약관**: `app/policy/[slug]/page.js` — terms/privacy/refund 3종, 슈퍼파인더 Policy.tsx와 같은 구성으로 새로 작성(원본 그대로 복사 아님).
+- **user_id 연결**: 프로젝트/템플릿 생성 시 로그인한 사용자의 id를 저장, 목록 조회도 본인 것만 필터링. RLS 정책도 `schema.sql`에 실제로 켜둠(단, API 라우트는 항상 service_role로 접속해 RLS를 우회하므로 지금 당장 필수는 아니고 나중에 브라우저 직접조회 대비용).
+- **라우트 구조 변경**: 로그인 게이트가 필요 없는 `/login`, `/policy/*`를 뺀 나머지 페이지들을 `app/(app)/` 라우트그룹으로 옮김(사이드바+로그아웃 버튼은 `app/(app)/layout.js`에만 있음). 상대경로 import가 한 단계씩 밀린 걸 다 잡아서 `npm run build` 통과 확인함.
+
+### Vercel 배포용 아키텍처 분리 (진행중)
+
+사용자가 "PC가 렌더링은 직접 하되, 접속은 아무 데서나 되게 하고 싶다"고 요청 — 슈퍼파인더의 remote MCP와 같은 방향.
+Vercel 서버리스 함수는 실행시간 제한 때문에 Remotion 렌더링을 못 돌리므로(계속 논의된 제약), 이렇게 분리함:
+
+- `app/api/jobs/route.js`(POST), `app/api/jobs/[id]/retry/route.js`: 이제 `runPipeline()`을 직접 호출하지 않고 job을 `queued` 상태로 DB에 넣기만 하고 끝남 (Vercel에 올려도 시간제한에 안 걸림).
+- `scripts/worker.js`(신규): 이 PC에서 계속 켜둬야 하는 폴링 프로세스. 5초마다 Supabase `jobs` 테이블에서 `queued` job을 찾아 실제로 `runPipeline()`을 실행함. `npm run worker`로 실행.
+- `app/`(Next.js 전체)는 이제 `lib/pipeline.js`/`lib/render.js`(무거운 Remotion 렌더러)를 전혀 import하지 않음 — `mcp-server/index.js`와 `scripts/worker.js`만 import함. 그래서 Vercel 배포본에 무거운 렌더링 코드가 안 딸려감.
+- **주의**: `scripts/worker.js`를 안 켜두면 Vercel에서 새 프로젝트를 만들어도 영원히 "대기중" 상태로 남는다. 로컬에서 `npm run dev`로 직접 쓸 때도 이제 워커를 따로 켜야 함(예전처럼 API가 바로 렌더링 안 함).
+
 ## 다음에 할 일 (우선순위 순)
 
-1. **사용자가 `.env.local`에 키 채워넣은 뒤 실제 end-to-end 한 번 실행** — 이게 제일 중요함. `generateScript.js`/`generateVoice.js`/`transcribeTimestamps.js`/Supabase 연동 전부 이때 처음 실전 검증됨. 에러 나면 그 API의 응답 형식을 다시 확인해서 파싱 로직 고칠 것.
-2. Supabase 프로젝트 생성 → `supabase/schema.sql` 실행 → `shorts` 버킷 public 확인 → `mcp-server/`에서 `get_rows`나 `list_projects_summary` 도구로 연결 확인
-3. 나중에 SaaS 전환 시: `supabase/schema.sql` 맨 아래 주석 처리된 RLS 정책 켜기 + Supabase Auth 연동 + Vercel 배포 (코드 구조 자체는 이미 이걸 염두에 두고 짜여 있음)
+1. **GitHub에 push → Vercel 프로젝트 생성 → 배포**. Vercel 환경변수는 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OWNER_EMAIL` 4개만 있으면 됨(AI/TTS 키는 Vercel에서 렌더링을 안 하니 필요 없음, 워커 돌리는 이 PC의 `.env.local`에만 있으면 됨).
+2. 배포되면 Supabase Auth 설정의 Site URL / Redirect URLs에 Vercel 도메인도 추가해야 구글 로그인이 배포본에서도 됨.
+3. `npm run worker`를 이 PC에서 상시 실행 상태로 유지(터미널 하나 계속 켜두거나, Windows 작업 스케줄러/pm2 등으로 등록하는 것도 고려).
 
 ## 하지 않기로 한 것 (스코프 아웃, 이유 있음)
 

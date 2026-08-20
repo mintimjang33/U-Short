@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '../../../lib/supabase.js';
-import { runPipeline } from '../../../lib/pipeline.js';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
+import { getCurrentUser } from '../../../lib/supabaseServerAuth.js';
 
 export const POST = withApiErrorHandling(async (request) => {
   const body = await request.json().catch(() => null);
@@ -12,6 +12,7 @@ export const POST = withApiErrorHandling(async (request) => {
     );
   }
 
+  const user = await getCurrentUser();
   const supabase = getSupabaseServerClient();
 
   const options = {
@@ -28,6 +29,7 @@ export const POST = withApiErrorHandling(async (request) => {
   const { data: project, error: projectError } = await supabase
     .from('projects')
     .insert({
+      user_id: user?.id || null,
       source_url: body.sourceUrl || null,
       source_text: body.sourceText || null,
       layout_id: body.layoutId || 'info',
@@ -53,11 +55,9 @@ export const POST = withApiErrorHandling(async (request) => {
     return NextResponse.json({ error: `job 생성 실패: ${jobError.message}` }, { status: 500 });
   }
 
-  // fire-and-forget: 응답은 바로 주고 파이프라인은 백그라운드에서 진행 (실사이트의 202+job_id 패턴과 동일)
-  runPipeline({ projectId: project.id, jobId: job.id }).catch((err) => {
-    console.error('[api/jobs] runPipeline 처리 중 예외', err);
-  });
-
+  // 여기서는 job을 queued로 만들기만 하고 끝낸다 — 실제 렌더링은 이 서버(Vercel일 수 있음)가 아니라
+  // scripts/worker.js를 돌리고 있는 PC가 Supabase를 폴링해서 가져가 처리한다.
+  // (렌더링은 무겁고 오래 걸려서 Vercel 서버리스 함수 안에서 직접 돌리면 시간제한에 걸림)
   return NextResponse.json({ projectId: project.id, jobId: job.id }, { status: 202 });
 });
 

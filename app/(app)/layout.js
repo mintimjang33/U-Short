@@ -1,0 +1,38 @@
+import { getCurrentUser } from '../../lib/supabaseServerAuth.js';
+import SignOutButton from './SignOutButton.jsx';
+
+export default async function AppLayout({ children }) {
+  const user = await getCurrentUser();
+  const isOwner = user?.email && user.email === process.env.OWNER_EMAIL;
+
+  return (
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="sidebar-logo">⚡ 슈퍼쇼츠</div>
+        <a className="sidebar-cta" href="/new">
+          + 쇼츠 새로 제작
+        </a>
+        <nav className="sidebar-nav">
+          <a href="/">내 프로젝트</a>
+          <a href="/templates">템플릿</a>
+          {isOwner && <a href="/admin">관리자</a>}
+        </nav>
+        <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8, wordBreak: 'break-all' }}>
+            {user?.email}
+          </div>
+          <SignOutButton />
+          <div style={{ marginTop: 10 }}>
+            <a href="/policy/terms" style={{ fontSize: 11, color: '#d1d5db', marginRight: 10 }}>
+              이용약관
+            </a>
+            <a href="/policy/privacy" style={{ fontSize: 11, color: '#d1d5db' }}>
+              개인정보처리방침
+            </a>
+          </div>
+        </div>
+      </aside>
+      <main className="main">{children}</main>
+    </div>
+  );
+}

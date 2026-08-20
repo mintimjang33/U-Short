@@ -1,4 +1,5 @@
-import { getSupabaseServerClient } from '../lib/supabase.js';
+import { getSupabaseServerClient } from '../../lib/supabase.js';
+import { getCurrentUser } from '../../lib/supabaseServerAuth.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,12 +11,15 @@ const STATUS_LABEL = {
 };
 
 async function loadProjects() {
+  const user = await getCurrentUser();
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('projects')
     .select('*, jobs(*)')
     .order('created_at', { ascending: false })
     .limit(60);
+  if (user) query = query.eq('user_id', user.id);
+  const { data, error } = await query;
 
   if (error) throw new Error(`프로젝트 목록을 불러오지 못했습니다: ${error.message}`);
 

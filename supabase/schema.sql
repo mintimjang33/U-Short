@@ -67,6 +67,15 @@ create table if not exists templates (
   created_at timestamptz not null default now()
 );
 
+-- 설정값(API 키 등) 저장소. 새 컴퓨터에서 이 프로젝트를 열 때 .env.local엔 Supabase 접속정보만
+-- 있으면 되고, 나머지(AI 대본/TTS 키)는 여기서 불러온다 — lib/remoteConfig.js가 시작 시 조회해서
+-- process.env에 채워넣는다. Vercel 환경변수처럼 재배포 없이 값만 바꿔도 즉시 반영되는 게 장점.
+create table if not exists app_config (
+  key text primary key,
+  value text not null,
+  updated_at timestamptz not null default now()
+);
+
 -- updated_at 자동 갱신
 create or replace function set_updated_at()
 returns trigger as $$
@@ -79,6 +88,11 @@ $$ language plpgsql;
 drop trigger if exists projects_set_updated_at on projects;
 create trigger projects_set_updated_at
   before update on projects
+  for each row execute function set_updated_at();
+
+drop trigger if exists app_config_set_updated_at on app_config;
+create trigger app_config_set_updated_at
+  before update on app_config
   for each row execute function set_updated_at();
 
 drop trigger if exists jobs_set_updated_at on jobs;
@@ -109,24 +123,31 @@ begin
 end;
 $$;
 
--- ── SaaS 전환 시 여기 주석 해제 ──────────────────────────────
--- alter table projects enable row level security;
--- alter table jobs enable row level security;
--- alter table templates enable row level security;
---
--- create policy "본인 프로젝트만 조회" on projects
---   for select using (auth.uid() = user_id);
--- create policy "본인 프로젝트만 생성" on projects
---   for insert with check (auth.uid() = user_id);
--- create policy "본인 프로젝트만 수정" on projects
---   for update using (auth.uid() = user_id);
---
--- create policy "본인 job만 조회" on jobs
---   for select using (
---     exists (select 1 from projects p where p.id = jobs.project_id and p.user_id = auth.uid())
---   );
---
--- create policy "본인 템플릿만 조회" on templates
---   for select using (auth.uid() = user_id);
+-- 로그인(Supabase Auth) 붙인 뒤 적용하는 RLS 정책. RLS 자체는 테이블 생성 시 이미 켜져 있고
+-- (Supabase SQL Editor의 "Run and enable RLS" 선택), API 라우트는 항상 service_role로 접속해서
+-- RLS를 우회하므로 이 정책이 없어도 앱 동작엔 지장 없다 — 다만 나중에 브라우저에서 publishable
+-- 키로 직접 이 테이블들을 조회하는 코드를 추가할 경우를 대비해 지금 미리 켜둔다.
+drop policy if exists "본인 프로젝트만 조회" on projects;
+create policy "본인 프로젝트만 조회" on projects
+  for select using (auth.uid() = user_id);
+drop policy if exists "본인 프로젝트만 생성" on projects;
+create policy "본인 프로젝트만 생성" on projects
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "본인 프로젝트만 수정" on projects;
+create policy "본인 프로젝트만 수정" on projects
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "본인 job만 조회" on jobs;
+create policy "본인 job만 조회" on jobs
+  for select using (
+    exists (select 1 from projects p where p.id = jobs.project_id and p.user_id = auth.uid())
+  );
+
+drop policy if exists "본인 템플릿만 조회" on templates;
+create policy "본인 템플릿만 조회" on templates
+  for select using (auth.uid() = user_id);
+drop policy if exists "본인 템플릿만 생성" on templates;
+create policy "본인 템플릿만 생성" on templates
+  for insert with check (auth.uid() = user_id);
 -- create policy "본인 템플릿만 생성" on templates
 --   for insert with check (auth.uid() = user_id);

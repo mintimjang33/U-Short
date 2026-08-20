@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker": "node scripts/worker.js",
     "test:extract": "node scripts/test-extract.js",
     "test:captions": "node scripts/test-captions.js",
     "test:render": "node scripts/test-render.js"
@@ -18,6 +19,7 @@
     "@remotion/cli": "4.0.512",
     "@remotion/player": "4.0.512",
     "@remotion/renderer": "4.0.512",
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.45.4",
     "cheerio": "^1.0.0",
     "jsdom": "^25.0.1",

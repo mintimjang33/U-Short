@@ -10,7 +10,7 @@ import {
   CAPTION_PRESET_LIST,
   SCRIPT_PROVIDERS,
   VOICE_PROVIDERS,
-} from '../../lib/options.js';
+} from '../../../lib/options.js';
 
 function Pill({ selected, onClick, children }) {
   return (

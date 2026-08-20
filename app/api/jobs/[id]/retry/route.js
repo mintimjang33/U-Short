@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '../../../../../lib/supabase.js';
-import { runPipeline } from '../../../../../lib/pipeline.js';
 import { withApiErrorHandling } from '../../../../../lib/apiHandler.js';
 
 // 실패(또는 완료)한 job을 같은 프로젝트 설정 그대로 다시 실행한다.
@@ -32,9 +31,6 @@ export const POST = withApiErrorHandling(async (_request, { params }) => {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  runPipeline({ projectId: existingJob.project_id, jobId: newJob.id }).catch((err) => {
-    console.error('[api/jobs/retry] runPipeline 처리 중 예외', err);
-  });
-
+  // worker.js가 queued job을 폴링해서 처리한다 (app/api/jobs/route.js와 동일한 이유)
   return NextResponse.json({ jobId: newJob.id }, { status: 202 });
 });

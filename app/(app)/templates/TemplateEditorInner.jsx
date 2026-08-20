@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Player } from '@remotion/player';
-import { InfoLayout } from '../../remotion/src/layouts/InfoLayout.jsx';
-import { CardLayout } from '../../remotion/src/layouts/CardLayout.jsx';
-import { LAYOUTS, CAPTION_PRESET_LIST } from '../../lib/options.js';
+import { InfoLayout } from '../../../remotion/src/layouts/InfoLayout.jsx';
+import { CardLayout } from '../../../remotion/src/layouts/CardLayout.jsx';
+import { LAYOUTS, CAPTION_PRESET_LIST } from '../../../lib/options.js';
 
 const DUMMY_CAPTIONS = [
   { text: '예시 자막입니다', startMs: 0, endMs: 2000 },
