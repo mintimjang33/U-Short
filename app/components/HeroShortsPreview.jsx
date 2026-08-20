@@ -4,19 +4,19 @@ import { useEffect, useState } from 'react';
 
 // 실제 remotion/src/layouts/*.jsx, captionPresets.js의 스타일 값을 그대로 옮긴 정적 목업.
 // (렌더링된 영상이 아니라 CSS로 재현한 미리보기 — 값은 전부 실제 소스에서 가져옴)
-function CaptionPill({ text, preset }) {
+function CaptionPill({ text, preset, scale = 1 }) {
   return (
     <span
       style={{
         display: 'inline-block',
-        padding: preset.backgroundColor ? (preset.pill ? '10px 24px' : '10px 18px') : 0,
+        padding: preset.backgroundColor ? (preset.pill ? `${10 * scale}px ${24 * scale}px` : `${10 * scale}px ${18 * scale}px`) : 0,
         borderRadius: preset.backgroundColor ? (preset.pill ? 9999 : 10) : 0,
         backgroundColor: preset.backgroundColor || 'transparent',
         fontFamily: preset.fontFamily,
         fontWeight: preset.fontWeight,
-        fontSize: Math.round(preset.fontSize * 0.34),
+        fontSize: Math.round(preset.fontSize * 0.34 * scale),
         color: preset.color,
-        WebkitTextStroke: preset.outlineColor ? `${preset.outlineWidth * 0.34}px ${preset.outlineColor}` : undefined,
+        WebkitTextStroke: preset.outlineColor ? `${preset.outlineWidth * 0.34 * scale}px ${preset.outlineColor}` : undefined,
         paintOrder: 'stroke fill',
         textShadow: preset.shadow ? '0 4px 10px rgba(0,0,0,0.55)' : undefined,
         textAlign: 'center',
@@ -28,10 +28,12 @@ function CaptionPill({ text, preset }) {
   );
 }
 
-const SAMPLES = [
+// picsum.photos 등 외부 이미지 서비스는 응답이 느리거나 멈추는 경우가 있어(로딩 실패 확인됨),
+// 랜딩페이지처럼 항상 안정적으로 떠야 하는 곳엔 외부 의존 없는 CSS 그라디언트를 대신 쓴다.
+export const SAMPLES = [
   {
     kind: 'info',
-    image: 'https://picsum.photos/seed/ushort-sample-1/540/620',
+    gradient: 'linear-gradient(160deg, #2563eb, #0891b2)',
     titleLine1: '제주 숨은 카페',
     titleLine2: '노을 맛집 3곳',
     captionText: '여기 진짜 인생샷 나옵니다',
@@ -39,7 +41,7 @@ const SAMPLES = [
   },
   {
     kind: 'card',
-    image: 'https://picsum.photos/seed/ushort-sample-2/540/960',
+    gradient: 'linear-gradient(160deg, #b45309, #dc2626)',
     titleLine1: '연말정산 미리',
     titleLine2: '준비하는 법',
     captionText: '12월에 이거 하나면 끝',
@@ -47,113 +49,170 @@ const SAMPLES = [
   },
   {
     kind: 'full-focused',
-    image: 'https://picsum.photos/seed/ushort-sample-3/540/960',
+    gradient: 'linear-gradient(160deg, #7e22ce, #db2777)',
     titleLine1: '자취 필수템',
     titleLine2: '10가지 추천',
     captionText: '이거 없으면 후회함',
     caption: { fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 50, color: '#ffffff', backgroundColor: '#ff6fa5', outlineColor: null, outlineWidth: 0, shadow: false, pill: true },
   },
+  {
+    kind: 'image-dark',
+    gradient: 'linear-gradient(160deg, #0f172a, #334155)',
+    titleLine1: '겨울 캠핑 장비',
+    titleLine2: '체크리스트',
+    captionText: '이거 하나면 완전군장',
+    caption: { fontFamily: 'Pretendard, sans-serif', fontWeight: 900, fontSize: 60, color: '#ffffff', backgroundColor: null, outlineColor: '#ff3b6f', outlineWidth: 10, shadow: false },
+  },
 ];
 
-export function HeroShortsPreview() {
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setActive((v) => (v + 1) % SAMPLES.length), 3200);
-    return () => clearInterval(id);
-  }, []);
-
-  const s = SAMPLES[active];
-
+// 실제 layouts/*.jsx 구조(상단 62%+하단 38%, 카드형, 풀스크린, 다크 2분할)를 CSS로 재현한 목업 카드.
+export function ShortsMockupCard({ sample, width = 280, badge = true }) {
+  const s = sample;
+  const scale = width / 280;
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-      <div
-        style={{
-          width: 280,
-          aspectRatio: '9 / 16',
-          borderRadius: 32,
-          overflow: 'hidden',
-          position: 'relative',
-          background: '#000',
-          boxShadow: '0 30px 70px rgba(0,0,0,0.55)',
-          border: '1px solid #22222f',
-        }}
-      >
+    <div
+      style={{
+        width,
+        aspectRatio: '9 / 16',
+        borderRadius: 24 * scale,
+        overflow: 'hidden',
+        position: 'relative',
+        background: '#000',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        border: '1px solid #22222f',
+      }}
+    >
+      {badge && (
         <span
           style={{
             position: 'absolute',
-            top: 14,
-            left: 14,
+            top: 14 * scale,
+            left: 14 * scale,
             zIndex: 2,
-            fontSize: 11,
+            fontSize: 11 * scale,
             fontWeight: 700,
             color: '#fff',
             background: 'linear-gradient(135deg, #fb923c, #ec4899, #8b5cf6)',
-            padding: '5px 12px',
+            padding: `${5 * scale}px ${12 * scale}px`,
             borderRadius: 9999,
           }}
         >
           완성 쇼츠
         </span>
+      )}
 
-        {s.kind === 'info' && (
-          <>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '62%', overflow: 'hidden' }}>
-              <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35))',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 24px',
-                }}
-              >
-                <div style={{ textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 22, color: '#fff', lineHeight: 1.25 }}>
-                  <div>{s.titleLine1}</div>
-                  <div>{s.titleLine2}</div>
-                </div>
+      {s.kind === 'info' && (
+        <>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '62%', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: `0 ${24 * scale}px`,
+              }}
+            >
+              <div style={{ textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 22 * scale, color: '#fff', lineHeight: 1.25 }}>
+                <div>{s.titleLine1}</div>
+                <div>{s.titleLine2}</div>
               </div>
             </div>
-            <div style={{ position: 'absolute', top: '62%', left: 0, right: 0, height: '38%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
-              <CaptionPill text={s.captionText} preset={s.caption} />
-            </div>
-          </>
-        )}
+          </div>
+          <div style={{ position: 'absolute', top: '62%', left: 0, right: 0, height: '38%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${16 * scale}px` }}>
+            <CaptionPill text={s.captionText} preset={s.caption} scale={scale} />
+          </div>
+        </>
+      )}
 
-        {s.kind === 'card' && (
-          <div style={{ position: 'absolute', inset: 10, borderRadius: 24, overflow: 'hidden' }}>
-            <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%)' }} />
-            <div style={{ position: 'absolute', top: 28, left: 0, right: 0, textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 20, color: '#fff', padding: '0 20px', lineHeight: 1.25 }}>
-              <div>{s.titleLine1}</div>
-              <div>{s.titleLine2}</div>
-            </div>
-            <div style={{ position: 'absolute', bottom: 26, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 16px' }}>
-              <CaptionPill text={s.captionText} preset={s.caption} />
+      {s.kind === 'card' && (
+        <div style={{ position: 'absolute', inset: 10 * scale, borderRadius: 24 * scale, overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%)' }} />
+          <div style={{ position: 'absolute', top: 28 * scale, left: 0, right: 0, textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 20 * scale, color: '#fff', padding: `0 ${20 * scale}px`, lineHeight: 1.25 }}>
+            <div>{s.titleLine1}</div>
+            <div>{s.titleLine2}</div>
+          </div>
+          <div style={{ position: 'absolute', bottom: 26 * scale, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: `0 ${16 * scale}px` }}>
+            <CaptionPill text={s.captionText} preset={s.caption} scale={scale} />
+          </div>
+        </div>
+      )}
+
+      {s.kind === 'full-focused' && (
+        <>
+          <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.75) 100%)' }} />
+          <div style={{ position: 'absolute', top: 28 * scale, left: 0, right: 0, textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 20 * scale, color: '#fff', padding: `0 ${22 * scale}px`, lineHeight: 1.25 }}>
+            <div>{s.titleLine1}</div>
+            <div>{s.titleLine2}</div>
+          </div>
+          <div style={{ position: 'absolute', bottom: 30 * scale, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: `0 ${16 * scale}px` }}>
+            <CaptionPill text={s.captionText} preset={s.caption} scale={scale} />
+          </div>
+        </>
+      )}
+
+      {s.kind === 'image-dark' && (
+        <>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '62%', overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 30%, rgba(5,5,7,0) 70%, #050507 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: `0 ${24 * scale}px`,
+              }}
+            >
+              <div style={{ textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 22 * scale, color: '#fff', lineHeight: 1.25 }}>
+                <div>{s.titleLine1}</div>
+                <div>{s.titleLine2}</div>
+              </div>
             </div>
           </div>
-        )}
+          <div
+            style={{
+              position: 'absolute',
+              top: '62%',
+              left: 0,
+              right: 0,
+              height: '38%',
+              background: 'linear-gradient(180deg, #0b0b10 0%, #050507 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: `0 ${16 * scale}px`,
+            }}
+          >
+            <CaptionPill text={s.captionText} preset={s.caption} scale={scale} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
-        {s.kind === 'full-focused' && (
-          <>
-            <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.75) 100%)' }} />
-            <div style={{ position: 'absolute', top: 28, left: 0, right: 0, textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 20, color: '#fff', padding: '0 22px', lineHeight: 1.25 }}>
-              <div>{s.titleLine1}</div>
-              <div>{s.titleLine2}</div>
-            </div>
-            <div style={{ position: 'absolute', bottom: 30, left: 0, right: 0, display: 'flex', justifyContent: 'center', padding: '0 16px' }}>
-              <CaptionPill text={s.captionText} preset={s.caption} />
-            </div>
-          </>
-        )}
-      </div>
+export function HeroShortsPreview() {
+  const [active, setActive] = useState(0);
+  const rotating = SAMPLES.slice(0, 3);
 
+  useEffect(() => {
+    const id = setInterval(() => setActive((v) => (v + 1) % rotating.length), 3200);
+    return () => clearInterval(id);
+  }, [rotating.length]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <ShortsMockupCard sample={rotating[active]} />
       <div style={{ display: 'flex', gap: 6 }}>
-        {SAMPLES.map((_, i) => (
+        {rotating.map((_, i) => (
           <button
             key={i}
             onClick={() => setActive(i)}

@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../lib/supabaseServerAuth.js';
-import { HeroShortsPreview } from './components/HeroShortsPreview.jsx';
+import { HeroShortsPreview, ShortsMockupCard, SAMPLES } from './components/HeroShortsPreview.jsx';
 
 const scriptTypes = [
   { n: 1, label: '핵심 요약형 대본' },
@@ -197,9 +197,14 @@ export default async function LandingPage() {
 
       <section style={{ textAlign: 'center', padding: '48px 24px', background: '#0e0e17' }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>지금도 쌓이는 유저들의 쇼츠</h2>
-        <p style={{ color: '#9c9cb5', marginBottom: 24 }}>
+        <p style={{ color: '#9c9cb5', marginBottom: 32 }}>
           블로거·크리에이터가 만든 쇼츠가 끊임없이 만들어지고 있어요.
         </p>
+        <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 32 }}>
+          {SAMPLES.map((s, i) => (
+            <ShortsMockupCard key={i} sample={s} width={180} />
+          ))}
+        </div>
         <a
           href={ctaHref}
           style={{
@@ -219,9 +224,12 @@ export default async function LandingPage() {
 
       <section style={{ textAlign: 'center', padding: '64px 24px' }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>실제 폰에서 보는 것처럼, 세로 피드</h2>
-        <p style={{ color: '#9c9cb5', marginBottom: 24 }}>
+        <p style={{ color: '#9c9cb5', marginBottom: 32 }}>
           릴스·쇼츠처럼 세로 9:16 그대로, 폰에서 보던 느낌으로 재생돼요.
         </p>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <ShortsMockupCard sample={SAMPLES[3]} width={300} />
+        </div>
         <a
           href={ctaHref}
           style={{
