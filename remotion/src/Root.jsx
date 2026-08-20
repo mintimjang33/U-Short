@@ -6,6 +6,8 @@ import { FullFocusedLayout } from './layouts/FullFocusedLayout.jsx';
 import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
 import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
+import { DEFAULT_INTRO_PRESET_ID } from './introPresets.js';
+import { withIntro, INTRO_DURATION_MS } from './withIntro.jsx';
 
 export const FPS = 30;
 const WIDTH = 1080;
@@ -22,68 +24,43 @@ export const defaultCompositionProps = {
   audioSrc: null,
   durationMs: 5000,
   extraInfo: [],
+  introEnabled: false,
+  introTemplateId: DEFAULT_INTRO_PRESET_ID,
+  introDisplayOnly: true,
 };
 
 const calculateMetadata = ({ props }) => {
   const durationMs = props.durationMs && props.durationMs > 0 ? props.durationMs : 5000;
+  const introMs = props.introEnabled ? INTRO_DURATION_MS : 0;
   return {
-    durationInFrames: Math.max(1, Math.ceil((durationMs / 1000) * FPS)),
+    durationInFrames: Math.max(1, Math.ceil(((durationMs + introMs) / 1000) * FPS)),
   };
 };
+
+const LAYOUTS = [
+  ['InfoLayout', InfoLayout],
+  ['CardLayout', CardLayout],
+  ['FullFocusedLayout', FullFocusedLayout],
+  ['ImageDarkLayout', ImageDarkLayout],
+  ['ViralMintLayout', ViralMintLayout],
+];
 
 export const RemotionRoot = () => {
   return (
     <>
-      <Composition
-        id="InfoLayout"
-        component={InfoLayout}
-        width={WIDTH}
-        height={HEIGHT}
-        fps={FPS}
-        durationInFrames={FALLBACK_DURATION_FRAMES}
-        defaultProps={defaultCompositionProps}
-        calculateMetadata={calculateMetadata}
-      />
-      <Composition
-        id="CardLayout"
-        component={CardLayout}
-        width={WIDTH}
-        height={HEIGHT}
-        fps={FPS}
-        durationInFrames={FALLBACK_DURATION_FRAMES}
-        defaultProps={defaultCompositionProps}
-        calculateMetadata={calculateMetadata}
-      />
-      <Composition
-        id="FullFocusedLayout"
-        component={FullFocusedLayout}
-        width={WIDTH}
-        height={HEIGHT}
-        fps={FPS}
-        durationInFrames={FALLBACK_DURATION_FRAMES}
-        defaultProps={defaultCompositionProps}
-        calculateMetadata={calculateMetadata}
-      />
-      <Composition
-        id="ImageDarkLayout"
-        component={ImageDarkLayout}
-        width={WIDTH}
-        height={HEIGHT}
-        fps={FPS}
-        durationInFrames={FALLBACK_DURATION_FRAMES}
-        defaultProps={defaultCompositionProps}
-        calculateMetadata={calculateMetadata}
-      />
-      <Composition
-        id="ViralMintLayout"
-        component={ViralMintLayout}
-        width={WIDTH}
-        height={HEIGHT}
-        fps={FPS}
-        durationInFrames={FALLBACK_DURATION_FRAMES}
-        defaultProps={defaultCompositionProps}
-        calculateMetadata={calculateMetadata}
-      />
+      {LAYOUTS.map(([id, Component]) => (
+        <Composition
+          key={id}
+          id={id}
+          component={withIntro(Component)}
+          width={WIDTH}
+          height={HEIGHT}
+          fps={FPS}
+          durationInFrames={FALLBACK_DURATION_FRAMES}
+          defaultProps={defaultCompositionProps}
+          calculateMetadata={calculateMetadata}
+        />
+      ))}
     </>
   );
 };

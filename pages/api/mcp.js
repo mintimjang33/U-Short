@@ -40,6 +40,20 @@ function errorResult(err) {
   return { content: [{ type: 'text', text: `에러: ${err.message || err}` }], isError: true };
 }
 
+// 소유자 계정(OWNER_EMAIL)의 automation_defaults를 조회해 create_shorts에서 생략된 필드에 채워넣는다.
+async function getOwnerDefaults(supabase) {
+  try {
+    if (!process.env.OWNER_EMAIL) return null;
+    const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 200 });
+    const owner = userList?.users?.find((u) => u.email === process.env.OWNER_EMAIL);
+    if (!owner) return null;
+    const { data } = await supabase.from('automation_defaults').select('*').eq('user_id', owner.id).maybeSingle();
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
 function buildServer() {
   const server = new McpServer({ name: 'supershorts-mcp-remote', version: '0.1.0' });
   const supabase = getSupabase();
@@ -67,19 +81,26 @@ function buildServer() {
         backgroundImageUrl: z.string().optional(),
         backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL'),
         extraInfoText: z.string().optional(),
+        introEnabled: z.boolean().optional().describe('기본 false. true면 본문 전에 1.8초 제목 전용 인트로보드를 붙임'),
+        introTemplateId: z.string().optional().describe('list_options로 전체 10종 확인 가능'),
       },
     },
     async (args) => {
       try {
         if (!args.sourceUrl && !args.sourceText) throw new Error('sourceUrl 또는 sourceText 중 하나는 필요합니다.');
 
+        const defaults = (await getOwnerDefaults(supabase)) || {};
+
         const options = {
           planningMode: args.planningMode || (args.sourceText && !args.sourceUrl ? 'direct' : 'auto'),
-          style: args.style || 'summary',
-          outputLanguage: args.outputLanguage || 'original',
-          lengthMode: args.lengthMode || 'shortform',
-          scriptProvider: args.scriptProvider || 'claude',
-          voiceProvider: args.voiceProvider || 'fal',
+          style: args.style || defaults.style || 'summary',
+          outputLanguage: args.outputLanguage || defaults.output_language || 'original',
+          lengthMode: args.lengthMode || defaults.length_mode || 'shortform',
+          scriptProvider: args.scriptProvider || defaults.script_provider || 'claude',
+          voiceProvider: args.voiceProvider || defaults.voice_provider || 'fal',
+          introEnabled: args.introEnabled ?? defaults.intro_enabled ?? false,
+          introTemplateId: args.introTemplateId || defaults.intro_template_id || null,
+          introDisplayOnly: true,
         };
 
         const { data: project, error: projectError } = await supabase
@@ -87,8 +108,8 @@ function buildServer() {
           .insert({
             source_url: args.sourceUrl || null,
             source_text: args.sourceText || null,
-            layout_id: args.layoutId || 'info',
-            content_template_id: args.captionPresetId || 'existing-preset-bold-white-outline',
+            layout_id: args.layoutId || defaults.layout_id || 'info',
+            content_template_id: args.captionPresetId || defaults.caption_preset_id || 'existing-preset-bold-white-outline',
             background: {
               color: args.backgroundColor || '#0a0a0a',
               imageUrl: args.backgroundImageUrl || null,
@@ -184,6 +205,7 @@ function buildServer() {
       textResult({
         layouts: OPTIONS.LAYOUTS,
         captionPresets: OPTIONS.CAPTION_PRESET_LIST,
+        introTemplates: OPTIONS.INTRO_TEMPLATE_LIST,
         scriptProviders: OPTIONS.SCRIPT_PROVIDERS,
         voiceProviders: OPTIONS.VOICE_PROVIDERS,
         scriptStyles: OPTIONS.SCRIPT_STYLES,

@@ -10,6 +10,7 @@ import {
   CAPTION_PRESET_LIST,
   SCRIPT_PROVIDERS,
   VOICE_PROVIDERS,
+  INTRO_TEMPLATE_LIST,
 } from '../../../lib/options.js';
 
 function Pill({ selected, onClick, children }) {
@@ -36,6 +37,8 @@ export default function NewProjectPage() {
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
   const [backgroundVideoUrl, setBackgroundVideoUrl] = useState('');
   const [extraInfoText, setExtraInfoText] = useState('');
+  const [introEnabled, setIntroEnabled] = useState(false);
+  const [introTemplateId, setIntroTemplateId] = useState(INTRO_TEMPLATE_LIST[0].id);
   const [uploading, setUploading] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -130,6 +133,8 @@ export default function NewProjectPage() {
           captionPresetId,
           scriptProvider,
           voiceProvider,
+          introEnabled,
+          introTemplateId,
           background: { color: backgroundColor, imageUrl: backgroundImageUrl || null, videoUrl: backgroundVideoUrl || null },
           extraInfo: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
           // 직접 작성한 대본은 AI가 다시 기획하지 않고 그대로 쓰도록 direct 모드로 보낸다.
@@ -249,6 +254,27 @@ export default function NewProjectPage() {
               </Pill>
             ))}
           </div>
+        </div>
+
+        <div className="field">
+          <label>
+            <input
+              type="checkbox"
+              checked={introEnabled}
+              onChange={(e) => setIntroEnabled(e.target.checked)}
+              style={{ marginRight: 6 }}
+            />
+            인트로보드 사용 (본문 시작 전 1.8초짜리 제목 전용 화면)
+          </label>
+          {introEnabled && (
+            <div className="pill-group" style={{ marginTop: 10 }}>
+              {INTRO_TEMPLATE_LIST.map((t) => (
+                <Pill key={t.id} selected={introTemplateId === t.id} onClick={() => setIntroTemplateId(t.id)}>
+                  {t.label}
+                </Pill>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="field">

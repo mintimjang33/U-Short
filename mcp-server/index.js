@@ -42,6 +42,25 @@ try {
   process.exit(1);
 }
 
+// 소유자 계정(OWNER_EMAIL)의 automation_defaults를 조회해 create_shorts에서 생략된 필드에 채워넣는다.
+// 이 MCP는 개인용 도구라 "로그인 세션"이 없으므로, 소유자 계정 기준으로 기본값을 찾는다.
+let cachedDefaults;
+async function getOwnerDefaults() {
+  if (cachedDefaults !== undefined) return cachedDefaults;
+  cachedDefaults = null;
+  try {
+    if (!process.env.OWNER_EMAIL) return cachedDefaults;
+    const { data: userList } = await supabase.auth.admin.listUsers({ perPage: 200 });
+    const owner = userList?.users?.find((u) => u.email === process.env.OWNER_EMAIL);
+    if (!owner) return cachedDefaults;
+    const { data } = await supabase.from('automation_defaults').select('*').eq('user_id', owner.id).maybeSingle();
+    cachedDefaults = data || null;
+  } catch (err) {
+    console.error('[supershorts-mcp] 자동화 기본값 조회 실패:', err.message);
+  }
+  return cachedDefaults;
+}
+
 const BUCKET = 'shorts';
 const TABLES = ['projects', 'jobs', 'templates'];
 const TABLE_SCHEMA = {
@@ -111,6 +130,8 @@ server.registerTool(
       backgroundImageUrl: z.string().optional().describe('비우면 대표 이미지를 자동으로 씀'),
       backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL (upload_asset으로 먼저 업로드)'),
       extraInfoText: z.string().optional().describe('좌상단에 계속 뜨는 워터마크 텍스트 (예: 채널명)'),
+      introEnabled: z.boolean().optional().describe('기본 false. true면 본문 전에 1.8초 제목 전용 인트로보드를 붙임'),
+      introTemplateId: z.string().optional().describe('list_options로 전체 10종 확인 가능, 기본 cool-living-room-intro'),
       wait: z.boolean().optional().describe('기본 true'),
     },
   },
@@ -131,6 +152,8 @@ server.registerTool(
         backgroundImageUrl,
         backgroundVideoUrl,
         extraInfoText,
+        introEnabled,
+        introTemplateId,
         wait,
       } = args;
 
@@ -138,13 +161,18 @@ server.registerTool(
         throw new Error('sourceUrl 또는 sourceText 중 하나는 필요합니다.');
       }
 
+      const defaults = (await getOwnerDefaults()) || {};
+
       const options = {
         planningMode: planningMode || (sourceText && !sourceUrl ? 'direct' : 'auto'),
-        style: style || 'summary',
-        outputLanguage: outputLanguage || 'original',
-        lengthMode: lengthMode || 'shortform',
-        scriptProvider: scriptProvider || 'claude',
-        voiceProvider: voiceProvider || 'fal',
+        style: style || defaults.style || 'summary',
+        outputLanguage: outputLanguage || defaults.output_language || 'original',
+        lengthMode: lengthMode || defaults.length_mode || 'shortform',
+        scriptProvider: scriptProvider || defaults.script_provider || 'claude',
+        voiceProvider: voiceProvider || defaults.voice_provider || 'fal',
+        introEnabled: introEnabled ?? defaults.intro_enabled ?? false,
+        introTemplateId: introTemplateId || defaults.intro_template_id || null,
+        introDisplayOnly: true,
       };
 
       const { data: project, error: projectError } = await supabase
@@ -152,8 +180,8 @@ server.registerTool(
         .insert({
           source_url: sourceUrl || null,
           source_text: sourceText || null,
-          layout_id: layoutId || 'info',
-          content_template_id: captionPresetId || DEFAULT_CAPTION_PRESET_ID,
+          layout_id: layoutId || defaults.layout_id || 'info',
+          content_template_id: captionPresetId || defaults.caption_preset_id || DEFAULT_CAPTION_PRESET_ID,
           background: {
             color: backgroundColor || '#0a0a0a',
             imageUrl: backgroundImageUrl || null,
@@ -327,6 +355,7 @@ server.registerTool(
     textResult({
       layouts: OPTIONS.LAYOUTS,
       captionPresets: OPTIONS.CAPTION_PRESET_LIST,
+      introTemplates: OPTIONS.INTRO_TEMPLATE_LIST,
       scriptProviders: OPTIONS.SCRIPT_PROVIDERS,
       voiceProviders: OPTIONS.VOICE_PROVIDERS,
       scriptStyles: OPTIONS.SCRIPT_STYLES,

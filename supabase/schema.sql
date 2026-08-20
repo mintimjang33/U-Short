@@ -67,6 +67,23 @@ create table if not exists templates (
   created_at timestamptz not null default now()
 );
 
+-- 자동화 기본값: 실사이트 API 문서의 "API 대시보드 자동화 기본값(use_saved_preset)"과 같은 개념.
+-- 회원별로 1행. 여기 저장해두면 /new에서 값을 안 넣거나 MCP create_shorts에서 필드를 생략해도
+-- 이 기본값이 자동 적용된다 (app/api/jobs/route.js, mcp-server/index.js, pages/api/mcp.js가 조회).
+create table if not exists automation_defaults (
+  user_id uuid primary key,
+  layout_id text,
+  caption_preset_id text,
+  intro_enabled boolean not null default false,
+  intro_template_id text,
+  script_provider text,
+  voice_provider text,
+  length_mode text,
+  output_language text,
+  style text,
+  updated_at timestamptz not null default now()
+);
+
 -- 설정값(API 키 등) 저장소. 새 컴퓨터에서 이 프로젝트를 열 때 .env.local엔 Supabase 접속정보만
 -- 있으면 되고, 나머지(AI 대본/TTS 키)는 여기서 불러온다 — lib/remoteConfig.js가 시작 시 조회해서
 -- process.env에 채워넣는다. Vercel 환경변수처럼 재배포 없이 값만 바꿔도 즉시 반영되는 게 장점.
@@ -93,6 +110,11 @@ create trigger projects_set_updated_at
 drop trigger if exists app_config_set_updated_at on app_config;
 create trigger app_config_set_updated_at
   before update on app_config
+  for each row execute function set_updated_at();
+
+drop trigger if exists automation_defaults_set_updated_at on automation_defaults;
+create trigger automation_defaults_set_updated_at
+  before update on automation_defaults
   for each row execute function set_updated_at();
 
 drop trigger if exists jobs_set_updated_at on jobs;
@@ -149,5 +171,14 @@ create policy "본인 템플릿만 조회" on templates
 drop policy if exists "본인 템플릿만 생성" on templates;
 create policy "본인 템플릿만 생성" on templates
   for insert with check (auth.uid() = user_id);
--- create policy "본인 템플릿만 생성" on templates
---   for insert with check (auth.uid() = user_id);
+
+alter table automation_defaults enable row level security;
+drop policy if exists "본인 자동화 기본값만 조회" on automation_defaults;
+create policy "본인 자동화 기본값만 조회" on automation_defaults
+  for select using (auth.uid() = user_id);
+drop policy if exists "본인 자동화 기본값만 생성" on automation_defaults;
+create policy "본인 자동화 기본값만 생성" on automation_defaults
+  for insert with check (auth.uid() = user_id);
+drop policy if exists "본인 자동화 기본값만 수정" on automation_defaults;
+create policy "본인 자동화 기본값만 수정" on automation_defaults
+  for update using (auth.uid() = user_id);

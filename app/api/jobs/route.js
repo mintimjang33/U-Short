@@ -15,15 +15,25 @@ export const POST = withApiErrorHandling(async (request) => {
   const user = await getCurrentUser();
   const supabase = getSupabaseServerClient();
 
+  // 요청에서 생략한 필드는 사용자가 /settings에 저장해둔 자동화 기본값으로 채운다
+  // (실사이트 API의 use_saved_preset과 같은 개념). 저장값도 없으면 하드코딩 기본값 사용.
+  let defaults = {};
+  if (user) {
+    const { data } = await supabase.from('automation_defaults').select('*').eq('user_id', user.id).maybeSingle();
+    if (data) defaults = data;
+  }
+
   const options = {
     planningMode: body.planningMode || 'auto',
-    style: body.style || 'summary',
-    outputLanguage: body.outputLanguage || 'original',
-    lengthMode: body.lengthMode || 'shortform',
-    scriptProvider: body.scriptProvider || 'claude',
-    voiceProvider: body.voiceProvider || 'fal',
+    style: body.style || defaults.style || 'summary',
+    outputLanguage: body.outputLanguage || defaults.output_language || 'original',
+    lengthMode: body.lengthMode || defaults.length_mode || 'shortform',
+    scriptProvider: body.scriptProvider || defaults.script_provider || 'claude',
+    voiceProvider: body.voiceProvider || defaults.voice_provider || 'fal',
     voice: body.voice || null,
-    introEnabled: !!body.introEnabled,
+    introEnabled: body.introEnabled ?? defaults.intro_enabled ?? false,
+    introTemplateId: body.introTemplateId || defaults.intro_template_id || null,
+    introDisplayOnly: body.introDisplayOnly ?? true,
   };
 
   const { data: project, error: projectError } = await supabase
@@ -32,8 +42,8 @@ export const POST = withApiErrorHandling(async (request) => {
       user_id: user?.id || null,
       source_url: body.sourceUrl || null,
       source_text: body.sourceText || null,
-      layout_id: body.layoutId || 'info',
-      content_template_id: body.captionPresetId || 'existing-preset-bold-white-outline',
+      layout_id: body.layoutId || defaults.layout_id || 'info',
+      content_template_id: body.captionPresetId || defaults.caption_preset_id || 'existing-preset-bold-white-outline',
       background: body.background || {},
       extra_info: body.extraInfo || [],
       options,
