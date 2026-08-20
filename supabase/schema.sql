@@ -101,9 +101,9 @@ create trigger jobs_set_updated_at
   for each row execute function set_updated_at();
 
 -- Storage: 배경/로고 업로드, 렌더링된 mp4를 담을 버킷 (공개 읽기)
-insert into storage.buckets (id, name, public)
-values ('shorts', 'shorts', true)
-on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('shorts', 'shorts', true, 104857600) -- 100MB, 바이럴민트 레이아웃용 인물 영상 업로드 대비
+on conflict (id) do update set file_size_limit = 104857600;
 
 -- MCP 서버(mcp-server/)의 run_sql 도구가 쓰는 읽기전용 SQL 실행 함수.
 -- SELECT로 시작하는 쿼리만 허용해서, AI 에이전트가 실수로 DROP/DELETE 등을 실행하지 못하게 막는다.

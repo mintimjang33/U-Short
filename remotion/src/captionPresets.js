@@ -1,5 +1,5 @@
-// 슈퍼쇼츠 실사이트 자막 탭에서 확인한 프리셋 18종 중 대표적인 6종을 재현.
-// ID는 실사이트 API 문서(생성 옵션 표)에 나온 kebab-case 네이밍을 그대로 따름.
+// 슈퍼쇼츠 실사이트 API 문서(supershorts.co.kr/business/docs, introTemplateId 표)의
+// "기존 프리셋" 8종 전부 재현. ID는 문서에 나온 kebab-case 네이밍을 그대로 따름.
 export const CAPTION_PRESETS = {
   'existing-preset-bold-white-outline': {
     label: '기본 · 흰글씨 굵은 외곽선',
@@ -66,6 +66,30 @@ export const CAPTION_PRESETS = {
     outlineColor: '#ff3b6f',
     outlineWidth: 10,
     shadow: false,
+  },
+  'existing-preset-pink-rounded': {
+    label: '핑크 라운드',
+    fontFamily: 'Pretendard, sans-serif',
+    fontWeight: 700,
+    fontSize: 50,
+    color: '#ffffff',
+    backgroundColor: '#ff6fa5',
+    outlineColor: null,
+    outlineWidth: 0,
+    shadow: false,
+    pill: true,
+  },
+  'existing-preset-black-pill': {
+    label: '블랙 알약',
+    fontFamily: 'Pretendard, sans-serif',
+    fontWeight: 700,
+    fontSize: 50,
+    color: '#ffffff',
+    backgroundColor: 'rgba(10,10,10,0.85)',
+    outlineColor: null,
+    outlineWidth: 0,
+    shadow: false,
+    pill: true,
   },
 };
 

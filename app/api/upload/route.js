@@ -4,8 +4,9 @@ import { getSupabaseServerClient } from '../../../lib/supabase.js';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
 
 const BUCKET = 'shorts';
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-const MAX_BYTES = 8 * 1024 * 1024; // 8MB
+const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB
 
 export const POST = withApiErrorHandling(async (request) => {
   const formData = await request.formData().catch(() => null);
@@ -17,8 +18,13 @@ export const POST = withApiErrorHandling(async (request) => {
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json({ error: `지원하지 않는 파일 형식입니다: ${file.type}` }, { status: 400 });
   }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: '파일이 너무 큽니다 (최대 8MB).' }, { status: 400 });
+  const isVideo = file.type.startsWith('video/');
+  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  if (file.size > maxBytes) {
+    return NextResponse.json(
+      { error: `파일이 너무 큽니다 (최대 ${Math.round(maxBytes / 1024 / 1024)}MB).` },
+      { status: 400 }
+    );
   }
 
   const supabase = getSupabaseServerClient();

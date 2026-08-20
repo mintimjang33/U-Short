@@ -103,12 +103,13 @@ server.registerTool(
       style: z.enum(['summary', 'hook', 'list']).optional().describe('기본 summary'),
       outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional().describe('기본 original(원문유지)'),
       lengthMode: z.enum(['shortform', 'longform']).optional().describe('기본 shortform'),
-      layoutId: z.enum(['info', 'card']).optional().describe('기본 info'),
+      layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional().describe('기본 info'),
       captionPresetId: z.string().optional().describe('기본 existing-preset-bold-white-outline, list_options로 전체 목록 확인 가능'),
       scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional().describe('기본 claude'),
       voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional().describe('기본 fal'),
       backgroundColor: z.string().optional().describe('기본 #0a0a0a'),
-      backgroundImageUrl: z.string().optional().describe('비우면 블로그 대표 이미지를 자동으로 씀'),
+      backgroundImageUrl: z.string().optional().describe('비우면 대표 이미지를 자동으로 씀'),
+      backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL (upload_asset으로 먼저 업로드)'),
       extraInfoText: z.string().optional().describe('좌상단에 계속 뜨는 워터마크 텍스트 (예: 채널명)'),
       wait: z.boolean().optional().describe('기본 true'),
     },
@@ -128,6 +129,7 @@ server.registerTool(
         voiceProvider,
         backgroundColor,
         backgroundImageUrl,
+        backgroundVideoUrl,
         extraInfoText,
         wait,
       } = args;
@@ -152,7 +154,11 @@ server.registerTool(
           source_text: sourceText || null,
           layout_id: layoutId || 'info',
           content_template_id: captionPresetId || DEFAULT_CAPTION_PRESET_ID,
-          background: { color: backgroundColor || '#0a0a0a', imageUrl: backgroundImageUrl || null },
+          background: {
+            color: backgroundColor || '#0a0a0a',
+            imageUrl: backgroundImageUrl || null,
+            videoUrl: backgroundVideoUrl || null,
+          },
           extra_info: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
           options,
         })
@@ -267,19 +273,28 @@ server.registerTool(
   'upload_asset',
   {
     description:
-      '로컬 이미지 파일 경로 또는 원격 이미지 URL을 Supabase Storage(shorts 버킷)에 올리고 공개 URL을 돌려준다. ' +
-      'create_shorts의 backgroundImageUrl로 바로 쓸 수 있다.',
+      '로컬 이미지/영상 파일 경로 또는 원격 URL을 Supabase Storage(shorts 버킷)에 올리고 공개 URL을 돌려준다. ' +
+      'create_shorts의 backgroundImageUrl(이미지) 또는 backgroundVideoUrl(viral-mint용 인물 영상)로 바로 쓸 수 있다.',
     inputSchema: { source: z.string().describe('로컬 파일 절대경로 또는 http(s) URL') },
   },
   async ({ source }) => {
     try {
       let buffer;
       let ext = path.extname(source).replace('.', '') || 'png';
-      const contentTypeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' };
+      const contentTypeMap = {
+        png: 'image/png',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        webp: 'image/webp',
+        gif: 'image/gif',
+        mp4: 'video/mp4',
+        webm: 'video/webm',
+        mov: 'video/quicktime',
+      };
 
       if (/^https?:\/\//i.test(source)) {
         const res = await fetch(source);
-        if (!res.ok) throw new Error(`원격 이미지 다운로드 실패 (${res.status}): ${source}`);
+        if (!res.ok) throw new Error(`원격 파일 다운로드 실패 (${res.status}): ${source}`);
         buffer = Buffer.from(await res.arrayBuffer());
         const urlExt = path.extname(new URL(source).pathname).replace('.', '');
         if (urlExt) ext = urlExt;

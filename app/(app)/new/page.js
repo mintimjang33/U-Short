@@ -34,8 +34,10 @@ export default function NewProjectPage() {
   const [voiceProvider, setVoiceProvider] = useState('fal');
   const [backgroundColor, setBackgroundColor] = useState('#0a0a0a');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
+  const [backgroundVideoUrl, setBackgroundVideoUrl] = useState('');
   const [extraInfoText, setExtraInfoText] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -82,6 +84,25 @@ export default function NewProjectPage() {
     }
   }
 
+  async function handleVideoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingVideo(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '업로드 실패');
+      setBackgroundVideoUrl(data.url);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploadingVideo(false);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (sourceMode === 'link' && !sourceUrl.trim()) {
@@ -109,7 +130,7 @@ export default function NewProjectPage() {
           captionPresetId,
           scriptProvider,
           voiceProvider,
-          background: { color: backgroundColor, imageUrl: backgroundImageUrl || null },
+          background: { color: backgroundColor, imageUrl: backgroundImageUrl || null, videoUrl: backgroundVideoUrl || null },
           extraInfo: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
           // 직접 작성한 대본은 AI가 다시 기획하지 않고 그대로 쓰도록 direct 모드로 보낸다.
           planningMode: sourceMode === 'manual' ? 'direct' : 'auto',
@@ -236,7 +257,7 @@ export default function NewProjectPage() {
         </div>
 
         <div className="field">
-          <label>배경 이미지 (선택, 안 넣으면 블로그 대표 이미지를 자동으로 씀)</label>
+          <label>배경 이미지 (선택, 안 넣으면 대표 이미지를 자동으로 씀)</label>
           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFileUpload} />
           {uploading && <div className="field-hint">업로드 중...</div>}
           {uploadError && <div className="field-hint" style={{ color: '#fda4af' }}>{uploadError}</div>}
@@ -249,6 +270,22 @@ export default function NewProjectPage() {
             </div>
           )}
         </div>
+
+        {LAYOUTS.find((l) => l.id === layoutId)?.requiresVideoUpload && (
+          <div className="field">
+            <label>인물 영상 업로드 (필수 · 바이럴민트는 직접 촬영한 영상을 배경으로 씀)</label>
+            <input type="file" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideoUpload} />
+            {uploadingVideo && <div className="field-hint">업로드 중...</div>}
+            {backgroundVideoUrl && (
+              <div className="field-hint">
+                업로드됨: <a href={backgroundVideoUrl} target="_blank" rel="noreferrer">미리보기</a>{' '}
+                <button type="button" onClick={() => setBackgroundVideoUrl('')} style={{ marginLeft: 8 }}>
+                  제거
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="field">
           <label>부가정보 오버레이 텍스트 (선택)</label>

@@ -2,6 +2,9 @@ import React from 'react';
 import { Composition } from 'remotion';
 import { InfoLayout } from './layouts/InfoLayout.jsx';
 import { CardLayout } from './layouts/CardLayout.jsx';
+import { FullFocusedLayout } from './layouts/FullFocusedLayout.jsx';
+import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
+import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
 
 export const FPS = 30;
@@ -14,6 +17,7 @@ export const defaultCompositionProps = {
   captions: [],
   captionPresetId: DEFAULT_CAPTION_PRESET_ID,
   backgroundImageUrl: null,
+  backgroundVideoUrl: null,
   backgroundColor: '#0a0a0a',
   audioSrc: null,
   durationMs: 5000,
@@ -43,6 +47,36 @@ export const RemotionRoot = () => {
       <Composition
         id="CardLayout"
         component={CardLayout}
+        width={WIDTH}
+        height={HEIGHT}
+        fps={FPS}
+        durationInFrames={FALLBACK_DURATION_FRAMES}
+        defaultProps={defaultCompositionProps}
+        calculateMetadata={calculateMetadata}
+      />
+      <Composition
+        id="FullFocusedLayout"
+        component={FullFocusedLayout}
+        width={WIDTH}
+        height={HEIGHT}
+        fps={FPS}
+        durationInFrames={FALLBACK_DURATION_FRAMES}
+        defaultProps={defaultCompositionProps}
+        calculateMetadata={calculateMetadata}
+      />
+      <Composition
+        id="ImageDarkLayout"
+        component={ImageDarkLayout}
+        width={WIDTH}
+        height={HEIGHT}
+        fps={FPS}
+        durationInFrames={FALLBACK_DURATION_FRAMES}
+        defaultProps={defaultCompositionProps}
+        calculateMetadata={calculateMetadata}
+      />
+      <Composition
+        id="ViralMintLayout"
+        component={ViralMintLayout}
         width={WIDTH}
         height={HEIGHT}
         fps={FPS}

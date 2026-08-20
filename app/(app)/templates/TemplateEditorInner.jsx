@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Player } from '@remotion/player';
 import { InfoLayout } from '../../../remotion/src/layouts/InfoLayout.jsx';
 import { CardLayout } from '../../../remotion/src/layouts/CardLayout.jsx';
+import { FullFocusedLayout } from '../../../remotion/src/layouts/FullFocusedLayout.jsx';
+import { ImageDarkLayout } from '../../../remotion/src/layouts/ImageDarkLayout.jsx';
+import { ViralMintLayout } from '../../../remotion/src/layouts/ViralMintLayout.jsx';
 import { LAYOUTS, CAPTION_PRESET_LIST } from '../../../lib/options.js';
 
 const DUMMY_CAPTIONS = [
@@ -53,7 +56,14 @@ export default function TemplateEditorInner() {
     refreshTemplates();
   }, []);
 
-  const Component = layoutId === 'card' ? CardLayout : InfoLayout;
+  const LAYOUT_COMPONENTS = {
+    info: InfoLayout,
+    card: CardLayout,
+    'full-focused': FullFocusedLayout,
+    'image-dark': ImageDarkLayout,
+    'viral-mint': ViralMintLayout,
+  };
+  const Component = LAYOUT_COMPONENTS[layoutId] || InfoLayout;
 
   const inputProps = useMemo(
     () => ({
