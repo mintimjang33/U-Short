@@ -174,11 +174,19 @@ Vercel 서버리스 함수는 실행시간 제한 때문에 Remotion 렌더링�
 - `app/`(Next.js 전체)는 이제 `lib/pipeline.js`/`lib/render.js`(무거운 Remotion 렌더러)를 전혀 import하지 않음 — `mcp-server/index.js`와 `scripts/worker.js`만 import함. 그래서 Vercel 배포본에 무거운 렌더링 코드가 안 딸려감.
 - **주의**: `scripts/worker.js`를 안 켜두면 Vercel에서 새 프로젝트를 만들어도 영원히 "대기중" 상태로 남는다. 로컬에서 `npm run dev`로 직접 쓸 때도 이제 워커를 따로 켜야 함(예전처럼 API가 바로 렌더링 안 함).
 
+## 브랜드 변경 + 배포 완료 + 뉴스/유튜브 지원 조사 (2026-08-20 추가)
+
+- **브랜드**: "슈퍼쇼츠" → **"UShort"**로 전면 변경, 디자인도 라이트 흑백 미니멀 → **다크모드 + 오렌지/핑크/바이올렛 그라디언트**로 완전히 새로 감(슈퍼파인더의 violet/indigo 플랫컬러와 겹치지 않게 의도적으로 다르게). `app/globals.css`에 `--grad` CSS 변수로 정의. 마케팅 카피의 "블로그 URL" 표현도 "URL"로 일반화(블로그 전용이 아니라 뉴스 등도 지원한다는 걸 반영).
+- **실제 배포 완료**: GitHub(`mintimjang33/U-Short`) → Vercel(`https://u-short-beige.vercel.app`) 배포 성공, 구글 로그인까지 실제 로그인 테스트로 확인됨. 원격 MCP(`pages/api/mcp.js`)도 `https://u-short-beige.vercel.app/api/mcp?key=ushort_admin_2026`로 claude.ai 커넥터 연결 가능(단, `create_shorts`는 job을 queued로 넣기만 함 — 실제 렌더링은 여전히 PC의 `npm run worker`가 담당).
+  - 배포 중 발견해서 고친 버그: 미들웨어가 `/.well-known/*` 경로까지 로그인 페이지로 리다이렉트시켜서 claude.ai가 이걸 OAuth 서버로 오인, DCR(동적 클라이언트 등록)을 시도하다 연결 실패하는 문제 있었음 → matcher에서 `.well-known` 제외해서 해결.
+- **뉴스 지원 조사 완료**: 네이버뉴스 실제 기사 URL로 테스트해보니, 기존 `lib/extract.js`의 범용 Readability 경로가 **이미 잘 작동함**(네이버뉴스 전용 `#dic_area` 셀렉터로 뽑은 것과 거의 동일한 품질, 1147자 vs 1154자) — **전용 파서 추가 불필요**. `scripts/test-news-pipeline.js`로 실제 뉴스 URL(`n.news.naver.com`) → 완성 영상까지 end-to-end 검증 완료.
+- **유튜브 자막 지원은 여전히 막혀있음**: 자막 트랙 URL을 페이지에서 직접 추출해 브라우저 헤더까지 흉내내서 요청해도 200 OK에 0바이트 — 유튜브가 PO 토큰(브라우저 진위 증명)을 요구하는 것으로 확인(슈퍼파인더 때와 동일 증상, 직접 재검증함). 세 가지 선택지 논의됨: (1) 자막 없이 제목+설명만으로 대본 생성(당장 가능, 품질 얕음) (2) `youtubei.js` 등 PO 토큰 우회 라이브러리 도입(검증 필요) (3) Puppeteer 헤드리스 브라우저(무거움). **아직 미착수, 다음 세션에서 이어갈 것.**
+
 ## 다음에 할 일 (우선순위 순)
 
-1. **GitHub에 push → Vercel 프로젝트 생성 → 배포**. Vercel 환경변수는 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OWNER_EMAIL` 4개만 있으면 됨(AI/TTS 키는 Vercel에서 렌더링을 안 하니 필요 없음, 워커 돌리는 이 PC의 `.env.local`에만 있으면 됨).
-2. 배포되면 Supabase Auth 설정의 Site URL / Redirect URLs에 Vercel 도메인도 추가해야 구글 로그인이 배포본에서도 됨.
-3. `npm run worker`를 이 PC에서 상시 실행 상태로 유지(터미널 하나 계속 켜두거나, Windows 작업 스케줄러/pm2 등으로 등록하는 것도 고려).
+1. **유튜브 지원**: 위 3가지 선택지 중 하나 골라서 구현 (사용자와 논의 중 — 재개 시 이 섹션부터 읽을 것)
+2. `npm run worker`를 이 PC에서 상시 실행 상태로 유지(터미널 하나 계속 켜두거나, Windows 작업 스케줄러/pm2 등으로 등록하는 것도 고려) — 아직 상시 실행 체계는 안 갖춰짐
+3. `/new` 페이지의 안내 문구도 "블로그 링크" 대신 뉴스 등도 된다는 걸 명시하면 좋음(현재는 라벨만 "URL"로 바꿔둔 상태)
 
 ## 하지 않기로 한 것 (스코프 아웃, 이유 있음)
 
