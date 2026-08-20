@@ -2,6 +2,24 @@
 
 import { useEffect, useState } from 'react';
 
+function EyeIcon({ open }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f4f4f8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {open ? (
+        <>
+          <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      ) : (
+        <>
+          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.4 19.4 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a19.5 19.5 0 0 1-2.16 3.19M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function AdminPage() {
   const [users, setUsers] = useState(null);
   const [error, setError] = useState(null);
@@ -176,7 +194,7 @@ export default function AdminPage() {
                   {row.present && (
                     <>
                       <button onClick={() => toggleReveal('env', row.key)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15 }}>
-                        {isRevealed ? '🙈' : '👁'}
+                        <EyeIcon open={!isRevealed} />
                       </button>
                       <button onClick={() => copyValue('env', row.key, row.masked)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#9c9cb5' }}>
                         복사
@@ -210,7 +228,7 @@ export default function AdminPage() {
                     {isRevealed ? revealed[id] : row.masked}
                   </div>
                   <button onClick={() => toggleReveal('app_config', row.key)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15 }}>
-                    {isRevealed ? '🙈' : '👁'}
+                    <EyeIcon open={!isRevealed} />
                   </button>
                   <button onClick={() => copyValue('app_config', row.key, row.masked)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#9c9cb5' }}>
                     복사
