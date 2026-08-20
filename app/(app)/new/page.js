@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import QRCode from 'qrcode';
 import {
   SCRIPT_STYLES,
   OUTPUT_LANGUAGES,
@@ -68,6 +69,48 @@ export default function NewProjectPage() {
   const [stockKeywords, setStockKeywords] = useState([]);
   const [stockVideos, setStockVideos] = useState([]);
   const [selectedStockVideoId, setSelectedStockVideoId] = useState(null);
+
+  // 핸드폰 QR 사진/영상 가져오기
+  const [mobileToken, setMobileToken] = useState(null);
+  const [mobileQrDataUrl, setMobileQrDataUrl] = useState(null);
+  const [mobileFiles, setMobileFiles] = useState([]);
+  const [selectedMobileUrl, setSelectedMobileUrl] = useState(null);
+  const mobilePollRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (mobilePollRef.current) clearInterval(mobilePollRef.current);
+    };
+  }, []);
+
+  async function startMobileUpload() {
+    const token = crypto.randomUUID();
+    setMobileToken(token);
+    setMobileFiles([]);
+    setSelectedMobileUrl(null);
+    const url = `${window.location.origin}/mobile-upload/${token}`;
+    setMobileQrDataUrl(await QRCode.toDataURL(url, { width: 220, margin: 1 }));
+
+    if (mobilePollRef.current) clearInterval(mobilePollRef.current);
+    mobilePollRef.current = setInterval(async () => {
+      const res = await fetch(`/api/mobile-upload/${token}`);
+      const data = await res.json().catch(() => null);
+      if (data?.files) setMobileFiles(data.files);
+    }, 3000);
+  }
+
+  function selectMobileFile(file) {
+    setSelectedMobileUrl(file.url);
+    setSelectedStockVideoId(null);
+    const isVideo = file.type?.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name || '');
+    if (isVideo) {
+      setBackgroundVideoUrl(file.url);
+      setBackgroundImageUrl('');
+    } else {
+      setBackgroundImageUrl(file.url);
+      setBackgroundVideoUrl('');
+    }
+  }
 
   useEffect(() => {
     fetch('/api/templates')
@@ -504,7 +547,10 @@ export default function NewProjectPage() {
                     <button
                       type="button"
                       key={v.id}
-                      onClick={() => setSelectedStockVideoId(selectedStockVideoId === v.id ? null : v.id)}
+                      onClick={() => {
+                        setSelectedStockVideoId(selectedStockVideoId === v.id ? null : v.id);
+                        setSelectedMobileUrl(null);
+                      }}
                       style={{
                         padding: 0,
                         borderRadius: 10,
@@ -529,6 +575,55 @@ export default function NewProjectPage() {
               </>
             )}
           </div>
+
+          {!selectedStockVideoId && (
+            <div className="field">
+              <label>또는 핸드폰에서 QR로 사진/영상 가져오기</label>
+              {!mobileToken && (
+                <button type="button" className="pill" onClick={startMobileUpload}>
+                  📱 QR 코드 보이기
+                </button>
+              )}
+              {mobileToken && (
+                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginTop: 8, flexWrap: 'wrap' }}>
+                  {mobileQrDataUrl && (
+                    <img src={mobileQrDataUrl} alt="QR 코드" style={{ width: 140, height: 140, borderRadius: 8, background: '#fff', padding: 8 }} />
+                  )}
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <div className="field-hint">폰 카메라로 이 QR을 찍으면 업로드 페이지가 열려요.</div>
+                    {mobileFiles.length === 0 && <div className="field-hint">아직 올라온 파일이 없어요...</div>}
+                    {mobileFiles.length > 0 && (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                        {mobileFiles.map((f) => (
+                          <button
+                            type="button"
+                            key={f.url}
+                            onClick={() => selectMobileFile(f)}
+                            style={{
+                              width: 64,
+                              height: 64,
+                              padding: 0,
+                              borderRadius: 8,
+                              overflow: 'hidden',
+                              border: selectedMobileUrl === f.url ? '3px solid #a78bfa' : '1px solid #2a2a3c',
+                              cursor: 'pointer',
+                              background: '#000',
+                            }}
+                          >
+                            {(f.type || '').startsWith('video/') ? (
+                              <video src={f.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                            ) : (
+                              <img src={f.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {!selectedStockVideoId && (
             <div className="field">
