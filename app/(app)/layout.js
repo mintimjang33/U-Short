@@ -8,7 +8,9 @@ export default async function AppLayout({ children }) {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="sidebar-logo">⚡ 슈퍼쇼츠</div>
+        <a href="/" className="sidebar-logo" style={{ textDecoration: 'none', color: 'inherit' }}>
+          ⚡ 슈퍼쇼츠
+        </a>
         <a className="sidebar-cta" href="/new">
           + 쇼츠 새로 제작
         </a>

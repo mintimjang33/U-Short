@@ -16,7 +16,23 @@ export default function LandingPage() {
           borderBottom: '1px solid #f0f0f0',
         }}
       >
-        <div style={{ fontWeight: 800, fontSize: 16 }}>⚡ 슈퍼쇼츠</div>
+        <a href="/" aria-label="슈퍼쇼츠 홈" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
+          <span style={{ fontWeight: 800, fontSize: 16 }}>⚡ 슈퍼쇼츠</span>
+        </a>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 32, fontSize: 14, color: '#6b7280' }}>
+          <a href="#preview" style={{ color: 'inherit' }}>
+            쇼츠 둘러보기
+          </a>
+          <a href="/pricing" style={{ color: 'inherit' }}>
+            가격 안내
+          </a>
+          <a href="/blog" style={{ color: 'inherit' }}>
+            블로그
+          </a>
+          <a href="/notices" style={{ color: 'inherit' }}>
+            공지사항
+          </a>
+        </nav>
         <a
           href="/login"
           style={{
