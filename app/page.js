@@ -1,10 +1,17 @@
+import { getCurrentUser } from '../lib/supabaseServerAuth.js';
+
 const scriptTypes = [
   { n: 1, label: '핵심 요약형 대본' },
   { n: 2, label: '후킹 강조형 대본' },
   { n: 3, label: '정보 나열형 대본' },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const user = await getCurrentUser();
+  const ctaHref = user ? '/dashboard' : '/login';
+  const headerLabel = user ? '대시보드로 이동' : '로그인';
+  const heroLabel = user ? '대시보드로 이동' : '무료로 시작하기';
+
   return (
     <div>
       <header
@@ -34,7 +41,7 @@ export default function LandingPage() {
           </a>
         </nav>
         <a
-          href="/login"
+          href={ctaHref}
           style={{
             height: 36,
             padding: '0 20px',
@@ -47,7 +54,7 @@ export default function LandingPage() {
             alignItems: 'center',
           }}
         >
-          로그인
+          {headerLabel}
         </a>
       </header>
 
@@ -79,7 +86,7 @@ export default function LandingPage() {
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <a
-            href="/login"
+            href={ctaHref}
             style={{
               padding: '12px 28px',
               borderRadius: 9999,
@@ -89,7 +96,7 @@ export default function LandingPage() {
               fontSize: 14,
             }}
           >
-            무료로 시작하기
+            {heroLabel}
           </a>
           <a
             href="#preview"
@@ -153,7 +160,7 @@ export default function LandingPage() {
           블로거·크리에이터가 만든 쇼츠가 끊임없이 만들어지고 있어요.
         </p>
         <a
-          href="/login"
+          href={ctaHref}
           style={{
             display: 'inline-block',
             padding: '10px 24px',
@@ -174,7 +181,7 @@ export default function LandingPage() {
           릴스·쇼츠처럼 세로 9:16 그대로, 폰에서 보던 느낌으로 재생돼요.
         </p>
         <a
-          href="/login"
+          href={ctaHref}
           style={{
             display: 'inline-block',
             padding: '10px 24px',
@@ -208,7 +215,7 @@ export default function LandingPage() {
           <div>
             <div style={{ fontWeight: 700, color: '#111827', marginBottom: 8 }}>서비스</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <a href="/login" style={{ color: '#9ca3af' }}>
+              <a href={ctaHref} style={{ color: '#9ca3af' }}>
                 새로 제작
               </a>
               <span>가격 안내</span>
