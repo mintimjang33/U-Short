@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   SCRIPT_STYLES,
   OUTPUT_LANGUAGES,
@@ -26,14 +26,18 @@ function Pill({ selected, onClick, children }) {
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // 템플릿 놀이터(/lab/template-playground)에서 고른 레이아웃/자막 프리셋을 쿼리로 넘겨받는다.
+  const initialLayoutId = searchParams.get('layoutId') || 'info';
+  const initialCaptionPresetId = searchParams.get('captionPresetId') || CAPTION_PRESET_LIST[0].id;
   const [sourceMode, setSourceMode] = useState('link'); // 'link' | 'manual'
   const [sourceUrl, setSourceUrl] = useState('');
   const [manualText, setManualText] = useState('');
   const [style, setStyle] = useState('summary');
   const [outputLanguage, setOutputLanguage] = useState('original');
   const [lengthMode, setLengthMode] = useState('shortform');
-  const [layoutId, setLayoutId] = useState('info');
-  const [captionPresetId, setCaptionPresetId] = useState(CAPTION_PRESET_LIST[0].id);
+  const [layoutId, setLayoutId] = useState(initialLayoutId);
+  const [captionPresetId, setCaptionPresetId] = useState(initialCaptionPresetId);
   const [scriptProvider, setScriptProvider] = useState('claude');
   const [voiceProvider, setVoiceProvider] = useState('fal');
   const [voiceId, setVoiceId] = useState('');

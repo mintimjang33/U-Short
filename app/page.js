@@ -1,5 +1,6 @@
 import { getCurrentUser } from '../lib/supabaseServerAuth.js';
-import { HeroShortsPreview, ShortsMockupCard, SAMPLES } from './components/HeroShortsPreview.jsx';
+import { HeroShortsPreview, ShortsMockupCard } from './components/HeroShortsPreview.jsx';
+import { SAMPLES } from './components/shortsSamples.js';
 
 const scriptTypes = [
   { n: 1, label: '핵심 요약형 대본' },

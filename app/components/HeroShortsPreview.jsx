@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { SAMPLES } from './shortsSamples.js';
 
 // 실제 remotion/src/layouts/*.jsx, captionPresets.js의 스타일 값을 그대로 옮긴 정적 목업.
 // (렌더링된 영상이 아니라 CSS로 재현한 미리보기 — 값은 전부 실제 소스에서 가져옴)
@@ -27,43 +28,6 @@ function CaptionPill({ text, preset, scale = 1 }) {
     </span>
   );
 }
-
-// picsum.photos 등 외부 이미지 서비스는 응답이 느리거나 멈추는 경우가 있어(로딩 실패 확인됨),
-// 랜딩페이지처럼 항상 안정적으로 떠야 하는 곳엔 외부 의존 없는 CSS 그라디언트를 대신 쓴다.
-export const SAMPLES = [
-  {
-    kind: 'info',
-    gradient: 'linear-gradient(160deg, #2563eb, #0891b2)',
-    titleLine1: '제주 숨은 카페',
-    titleLine2: '노을 맛집 3곳',
-    captionText: '여기 진짜 인생샷 나옵니다',
-    caption: { fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 58, color: '#ffffff', backgroundColor: null, outlineColor: '#000000', outlineWidth: 8, shadow: false },
-  },
-  {
-    kind: 'card',
-    gradient: 'linear-gradient(160deg, #b45309, #dc2626)',
-    titleLine1: '연말정산 미리',
-    titleLine2: '준비하는 법',
-    captionText: '12월에 이거 하나면 끝',
-    caption: { fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 52, color: '#ffffff', backgroundColor: 'rgba(0,0,0,0.75)', outlineColor: null, outlineWidth: 0, shadow: false },
-  },
-  {
-    kind: 'full-focused',
-    gradient: 'linear-gradient(160deg, #7e22ce, #db2777)',
-    titleLine1: '자취 필수템',
-    titleLine2: '10가지 추천',
-    captionText: '이거 없으면 후회함',
-    caption: { fontFamily: 'Pretendard, sans-serif', fontWeight: 700, fontSize: 50, color: '#ffffff', backgroundColor: '#ff6fa5', outlineColor: null, outlineWidth: 0, shadow: false, pill: true },
-  },
-  {
-    kind: 'image-dark',
-    gradient: 'linear-gradient(160deg, #0f172a, #334155)',
-    titleLine1: '겨울 캠핑 장비',
-    titleLine2: '체크리스트',
-    captionText: '이거 하나면 완전군장',
-    caption: { fontFamily: 'Pretendard, sans-serif', fontWeight: 900, fontSize: 60, color: '#ffffff', backgroundColor: null, outlineColor: '#ff3b6f', outlineWidth: 10, shadow: false },
-  },
-];
 
 // 실제 layouts/*.jsx 구조(상단 62%+하단 38%, 카드형, 풀스크린, 다크 2분할)를 CSS로 재현한 목업 카드.
 export function ShortsMockupCard({ sample, width = 280, badge = true }) {
