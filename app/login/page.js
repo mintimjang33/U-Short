@@ -31,7 +31,7 @@ export default function LoginPage() {
       setNotice('가입 완료. 이메일 인증이 필요하면 받은편지함을 확인해주세요. 인증 후 로그인해주세요.');
       setMode('signin');
     } else {
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
     }
     setLoading(false);

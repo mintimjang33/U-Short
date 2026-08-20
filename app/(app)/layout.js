@@ -13,7 +13,7 @@ export default async function AppLayout({ children }) {
           + 쇼츠 새로 제작
         </a>
         <nav className="sidebar-nav">
-          <a href="/">내 프로젝트</a>
+          <a href="/dashboard">내 프로젝트</a>
           <a href="/templates">템플릿</a>
           {isOwner && <a href="/admin">관리자</a>}
         </nav>

@@ -73,7 +73,7 @@ export default function ProjectStatusPage({ params }) {
       const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '삭제에 실패했습니다.');
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message);
       setDeleting(false);

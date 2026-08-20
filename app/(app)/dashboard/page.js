@@ -1,5 +1,5 @@
-import { getSupabaseServerClient } from '../../lib/supabase.js';
-import { getCurrentUser } from '../../lib/supabaseServerAuth.js';
+import { getSupabaseServerClient } from '../../../lib/supabase.js';
+import { getCurrentUser } from '../../../lib/supabaseServerAuth.js';
 
 export const dynamic = 'force-dynamic';
 
