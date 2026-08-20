@@ -31,9 +31,10 @@ export default function NewProjectPage() {
   // 템플릿 놀이터(/lab/template-playground)에서 고른 레이아웃/자막 프리셋을 쿼리로 넘겨받는다.
   const initialLayoutId = searchParams.get('layoutId') || 'info';
   const initialCaptionPresetId = searchParams.get('captionPresetId') || CAPTION_PRESET_LIST[0].id;
-  const [sourceMode, setSourceMode] = useState('link'); // 'link' | 'manual'
+  const [sourceMode, setSourceMode] = useState('link'); // 'link' | 'manual' | 'topic'
   const [sourceUrl, setSourceUrl] = useState('');
   const [manualText, setManualText] = useState('');
+  const [topic, setTopic] = useState('');
   const [style, setStyle] = useState('summary');
   const [outputLanguage, setOutputLanguage] = useState('original');
   const [lengthMode, setLengthMode] = useState('shortform');
@@ -201,6 +202,10 @@ export default function NewProjectPage() {
       setError('대본을 10자 이상 입력해주세요.');
       return;
     }
+    if (sourceMode === 'topic' && !topic.trim()) {
+      setError('조사할 주제를 입력해주세요.');
+      return;
+    }
     setGeneratingScript(true);
     setError(null);
     setScriptError(null);
@@ -212,6 +217,7 @@ export default function NewProjectPage() {
         body: JSON.stringify({
           sourceUrl: sourceMode === 'link' ? sourceUrl.trim() : null,
           sourceText: sourceMode === 'manual' ? manualText.trim() : null,
+          topic: sourceMode === 'topic' ? topic.trim() : null,
           style,
           outputLanguage,
           lengthMode,
@@ -283,9 +289,9 @@ export default function NewProjectPage() {
     <div>
       <h1 className="page-title">새 쇼츠 만들기</h1>
       <p className="page-sub">
-        {sourceMode === 'link'
-          ? '네이버블로그, 티스토리 등 이미 게시된 링크로 쇼츠를 자동 제작해요.'
-          : '이미 다듬어둔 대본이 있다면 그대로 붙여넣으세요. AI가 내용을 다시 쓰지 않고 제목만 만들어요.'}
+        {sourceMode === 'link' && '네이버블로그, 티스토리 등 이미 게시된 링크로 쇼츠를 자동 제작해요.'}
+        {sourceMode === 'manual' && '이미 다듬어둔 대본이 있다면 그대로 붙여넣으세요. AI가 내용을 다시 쓰지 않고 제목만 만들어요.'}
+        {sourceMode === 'topic' && '주제만 입력하면 관련 뉴스를 조사해서 AI가 대본을 새로 기획해요.'}
       </p>
 
       {step === 1 && (
@@ -299,10 +305,13 @@ export default function NewProjectPage() {
             <Pill selected={sourceMode === 'manual'} onClick={() => setSourceMode('manual')}>
               📝 직접 대본 작성
             </Pill>
+            <Pill selected={sourceMode === 'topic'} onClick={() => setSourceMode('topic')}>
+              🔍 주제로 조사하기
+            </Pill>
           </div>
         </div>
 
-        {sourceMode === 'link' ? (
+        {sourceMode === 'link' && (
           <div className="field">
             <label>URL</label>
             <input
@@ -313,7 +322,23 @@ export default function NewProjectPage() {
               required={sourceMode === 'link'}
             />
           </div>
-        ) : (
+        )}
+
+        {sourceMode === 'topic' && (
+          <div className="field">
+            <label>조사할 주제</label>
+            <input
+              type="text"
+              placeholder="예: 2026 최저임금 인상"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              required={sourceMode === 'topic'}
+            />
+            <div className="field-hint">네이버 뉴스에서 관련 기사를 찾아 대본 재료로 씁니다.</div>
+          </div>
+        )}
+
+        {sourceMode === 'manual' && (
           <div className="field">
             <label>내 대본</label>
             <textarea
