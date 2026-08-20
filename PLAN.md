@@ -194,12 +194,18 @@ Vercel 서버리스 함수는 실행시간 제한 때문에 Remotion 렌더링�
   - 로컬/원격 MCP(`mcp-server/index.js`, `pages/api/mcp.js`) 둘 다 `layoutId` enum과 `backgroundVideoUrl` 파라미터 추가 완료.
 - 이 API 문서에서 추가로 확인된 것(아직 미착수): **인트로보드 10종**(`introTemplateId` 1~10번, 자막 프리셋과 별개), **음성 23종**(한국어11/일본어3/영어7/기타2 — 우리는 fal/ElevenLabs 자체 보이스라 이름 그대로 매칭은 안 되고, 페르소나 개념만 참고해서 만들어야 함).
 
+## 인트로보드 + 자동화 기본값 + 템플릿 갤러리 + 네이버뉴스 검색 MCP (2026-08-20 추가)
+
+- **인트로보드 10종 구현 완료**: `remotion/src/introPresets.js`(신규, 실사이트 `introTemplateId` 1~10번 값 그대로), `IntroBoard.jsx`(신규, 프리셋 스타일로 타이틀 화면만 보여줌), `withIntro.jsx`(신규, Remotion `<Sequence>`로 각 레이아웃 앞에 1.8초 인트로 붙이는 HOC). `Root.jsx`가 5개 레이아웃 전부를 `withIntro()`로 감싸도록 리팩터됨, `calculateMetadata`가 `introEnabled`일 때 총 길이에 인트로 시간을 더함.
+- **자동화 기본값 설정 페이지 신규**: `app/(app)/settings/page.js` — 레이아웃/자막프리셋/인트로/스타일/언어/길이/대본provider/음성provider를 사용자별로 미리 지정해두면(`automation_defaults` 테이블) 이후 `create_shorts`(MCP)나 `/new`에서 값을 안 넣어도 자동 적용됨(비워두면 "매번 직접 선택"). `app/api/automation-defaults/route.js`(GET/PUT) 신규. `app/api/jobs/route.js` POST 핸들러와 로컬/원격 MCP 둘 다 이 fallback 로직을 씀(`getOwnerDefaults()` 헬퍼).
+- **템플릿 목업(갤러리) 페이지 신규**: `app/(app)/templates/gallery/page.js` — 레이아웃 5종/자막프리셋 8종/인트로 10종을 실제 프리셋 데이터 파일 값 그대로 시각적으로 미리보기. 가짜 값 없음.
+- **네이버 뉴스 검색 MCP 도구 추가**: `search_naver_news` — `lib/naverNews.js`(신규, 프레시시즌의 실제 구현을 그대로 참고해 작성), 로컬/원격 MCP 둘 다 등록 완료. 자격증명(`NAVER_CLIENT_ID`/`SECRET`, developers.naver.com 검색 API)은 다른 AI/TTS 키와 동일하게 Supabase `app_config` 테이블에 저장해서 `loadRemoteConfig()`가 자동으로 불러옴 — 로컬/Vercel 둘 다 재배포 없이 씀. curl로 실제 API 응답 확인 완료(정상 작동).
+
 ## 다음에 할 일 (우선순위 순, 사용자가 "어차피 다 해야 하는거야, 순차적으로" 라고 확인함)
 
-1. **음성 선택지 확장**: 지금 fal 보이스 1개 고정 → 여러 페르소나 선택 가능하게 (실사이트 23종 참고, 실제 제공 provider가 지원하는 보이스로 매핑)
-2. **인트로보드 10종 구현**: 지금 아예 없는 기능. `introTemplateId` 1~10번 참고.
-3. **유튜브 지원**: 자막 PO 토큰 문제 재확인됨(여전히 막힘). 3가지 선택지(제목+설명만/`youtubei.js`/Puppeteer) 중 아직 미결정.
-4. `npm run worker`를 이 PC에서 상시 실행 상태로 유지 — 아직 상시 실행 체계는 안 갖춰짐
+1. **음성 선택지 확장**: 지금 fal 보이스 1개 고정 → 여러 페르소나 선택 가능하게 (실사이트 23종 참고, 실제 제공 provider가 지원하는 보이스로 매핑) — 아직 미착수
+2. **유튜브 지원**: 자막 PO 토큰 문제 재확인됨(여전히 막힘). 3가지 선택지(제목+설명만/`youtubei.js`/Puppeteer) 중 아직 미결정.
+3. `npm run worker`를 이 PC에서 상시 실행 상태로 유지 — 아직 상시 실행 체계는 안 갖춰짐
 
 ## 하지 않기로 한 것 (스코프 아웃, 이유 있음)
 

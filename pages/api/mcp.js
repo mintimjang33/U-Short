@@ -10,6 +10,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import * as OPTIONS from '../../lib/options.js';
+import { searchNaverNews } from '../../lib/naverNews.js';
 
 const GITHUB_REPO = 'mintimjang33/U-Short';
 const TABLES = ['projects', 'jobs', 'templates'];
@@ -212,6 +213,31 @@ function buildServer() {
         outputLanguages: OPTIONS.OUTPUT_LANGUAGES,
         lengthModes: OPTIONS.LENGTH_MODES,
       })
+  );
+
+  server.registerTool(
+    'search_naver_news',
+    {
+      title: '네이버 뉴스 검색',
+      description:
+        '네이버 뉴스 검색 오픈API로 기사 제목·링크·발행일·요약을 가져온다. 쇼츠로 만들 만한 최신 이슈나 ' +
+        '뉴스 소재를 찾을 때 쓴다 (sort:"date"로 최신순 조회하면 지금 뜨는 이슈 파악에 유용). 결과의 link를 ' +
+        'create_shorts의 sourceUrl로 바로 넘기면 그 기사를 쇼츠로 만들 수 있다.',
+      inputSchema: {
+        query: z.string().describe('검색어. 예: "여름 휴가철 사고"'),
+        display: z.number().int().min(1).max(100).optional().describe('가져올 기사 개수 (기본 10, 최대 100)'),
+        sort: z.enum(['sim', 'date']).optional().describe('정렬 방식: sim=정확도순(기본), date=최신순(트렌드 파악용)'),
+      },
+    },
+    async ({ query, display, sort }) => {
+      try {
+        const result = await searchNaverNews({ query, display, sort });
+        if (!result.items.length) return textResult(`"${query}" 검색 결과 없음`);
+        return textResult(result);
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
   );
 
   server.registerTool(
