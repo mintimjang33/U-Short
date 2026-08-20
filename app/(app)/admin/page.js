@@ -32,8 +32,8 @@ export default function AdminPage() {
       <p className="page-sub">가입 회원 목록</p>
 
       <div className="card" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 13, color: '#6b7280' }}>
-          가입 회원 <b style={{ color: '#111827' }}>{users?.length ?? 0}명</b>
+        <div style={{ fontSize: 13, color: '#9c9cb5' }}>
+          가입 회원 <b style={{ color: '#f4f4f8' }}>{users?.length ?? 0}명</b>
         </div>
         <button onClick={load} className="primary-btn" style={{ padding: '6px 14px', fontSize: 13 }}>
           새로고침
@@ -42,7 +42,7 @@ export default function AdminPage() {
 
       {loading && <div className="card">불러오는 중...</div>}
       {error && (
-        <div className="card" style={{ color: '#dc2626' }}>
+        <div className="card" style={{ color: '#fda4af' }}>
           {error}
         </div>
       )}
@@ -57,8 +57,8 @@ export default function AdminPage() {
               padding: '10px 16px',
               fontSize: 12,
               fontWeight: 700,
-              color: '#9ca3af',
-              borderBottom: '1px solid #f3f4f6',
+              color: '#9c9cb5',
+              borderBottom: '1px solid #2a2a3c',
             }}
           >
             <div>이메일</div>
@@ -75,13 +75,13 @@ export default function AdminPage() {
                 gap: 8,
                 padding: '12px 16px',
                 fontSize: 13,
-                borderBottom: '1px solid #f9fafb',
+                borderBottom: '1px solid #1c1c2b',
               }}
             >
               <div>{u.displayName || u.email}</div>
-              <div style={{ color: '#6b7280' }}>{u.provider}</div>
-              <div style={{ color: '#6b7280' }}>{new Date(u.createdAt).toLocaleDateString('ko-KR')}</div>
-              <div style={{ color: '#6b7280' }}>
+              <div style={{ color: '#9c9cb5' }}>{u.provider}</div>
+              <div style={{ color: '#9c9cb5' }}>{new Date(u.createdAt).toLocaleDateString('ko-KR')}</div>
+              <div style={{ color: '#9c9cb5' }}>
                 {u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleDateString('ko-KR') : '-'}
               </div>
             </div>

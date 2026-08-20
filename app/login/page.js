@@ -50,8 +50,19 @@ export default function LoginPage() {
       <div className="card" style={{ width: '100%', maxWidth: 380, padding: 32 }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 28, marginBottom: 8 }}>⚡</div>
-          <h1 style={{ fontWeight: 800, fontSize: 18 }}>슈퍼쇼츠</h1>
-          <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+          <h1
+            style={{
+              fontWeight: 800,
+              fontSize: 18,
+              backgroundImage: 'linear-gradient(135deg, #fdba74, #f472b6, #a78bfa)',
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            UShort
+          </h1>
+          <p style={{ fontSize: 12, color: '#9c9cb5', marginTop: 4 }}>
             {mode === 'signin' ? '로그인' : '계정 만들기'}
           </p>
         </div>
@@ -63,7 +74,15 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="이메일"
-            style={{ height: 44, padding: '0 14px', borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 14 }}
+            style={{
+              height: 44,
+              padding: '0 14px',
+              borderRadius: 10,
+              border: '1px solid #2a2a3c',
+              background: '#1c1c2b',
+              color: '#f4f4f8',
+              fontSize: 14,
+            }}
           />
           <input
             type="password"
@@ -72,11 +91,19 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="비밀번호 (6자 이상)"
-            style={{ height: 44, padding: '0 14px', borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 14 }}
+            style={{
+              height: 44,
+              padding: '0 14px',
+              borderRadius: 10,
+              border: '1px solid #2a2a3c',
+              background: '#1c1c2b',
+              color: '#f4f4f8',
+              fontSize: 14,
+            }}
           />
 
-          {error && <p style={{ fontSize: 13, color: '#dc2626' }}>{error}</p>}
-          {notice && <p style={{ fontSize: 13, color: '#059669' }}>{notice}</p>}
+          {error && <p style={{ fontSize: 13, color: '#fda4af' }}>{error}</p>}
+          {notice && <p style={{ fontSize: 13, color: '#6ee7b7' }}>{notice}</p>}
 
           <button type="submit" disabled={loading} className="primary-btn" style={{ height: 44, marginTop: 4 }}>
             {loading ? '처리 중...' : mode === 'signin' ? '로그인' : '가입하기'}
@@ -89,15 +116,15 @@ export default function LoginPage() {
             setError(null);
             setNotice(null);
           }}
-          style={{ width: '100%', textAlign: 'center', fontSize: 12, color: '#9ca3af', marginTop: 14, background: 'none', border: 'none', cursor: 'pointer' }}
+          style={{ width: '100%', textAlign: 'center', fontSize: 12, color: '#9c9cb5', marginTop: 14, background: 'none', border: 'none', cursor: 'pointer' }}
         >
           {mode === 'signin' ? '계정이 없으신가요? 가입하기' : '이미 계정이 있으신가요? 로그인'}
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
-          <div style={{ height: 1, background: '#f0f0f0', flex: 1 }} />
-          <span style={{ fontSize: 11, color: '#d1d5db' }}>또는</span>
-          <div style={{ height: 1, background: '#f0f0f0', flex: 1 }} />
+          <div style={{ height: 1, background: '#2a2a3c', flex: 1 }} />
+          <span style={{ fontSize: 11, color: '#6b6b85' }}>또는</span>
+          <div style={{ height: 1, background: '#2a2a3c', flex: 1 }} />
         </div>
 
         <button
@@ -106,10 +133,11 @@ export default function LoginPage() {
             width: '100%',
             height: 44,
             borderRadius: 10,
-            border: '1px solid #e5e7eb',
+            border: '1px solid #2a2a3c',
             fontSize: 14,
             fontWeight: 600,
-            background: '#fff',
+            background: '#1c1c2b',
+            color: '#f4f4f8',
             cursor: 'pointer',
           }}
         >

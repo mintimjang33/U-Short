@@ -2,14 +2,14 @@ const CONTENT = {
   terms: {
     title: '이용약관',
     body: `제1조 (목적)
-이 약관은 슈퍼쇼츠(이하 "서비스")가 제공하는 블로그 URL 기반 쇼츠 영상 자동 제작 서비스의 이용 조건 및 절차를 규정함을 목적으로 합니다.
+이 약관은 UShort(이하 "서비스")가 제공하는 URL 기반 쇼츠 영상 자동 제작 서비스의 이용 조건 및 절차를 규정함을 목적으로 합니다.
 
 제2조 (서비스 이용)
 서비스는 이용자 본인의 대본 생성 AI(Claude/Gemini/GPT 중 택1) 및 음성 합성(TTS) API 키를 등록해야 정상적으로 이용할 수 있습니다.
 API 사용량, 요금, 할당량 초과 등으로 인한 문제는 각 API 제공사의 정책을 따릅니다.
 
 제3조 (콘텐츠 책임)
-이용자가 입력한 블로그 URL·직접 작성한 대본을 기반으로 생성된 영상의 저작권 및 콘텐츠 책임은 이용자 본인에게 있습니다.
+이용자가 입력한 URL·직접 작성한 대본을 기반으로 생성된 영상의 저작권 및 콘텐츠 책임은 이용자 본인에게 있습니다.
 
 제4조 (면책)
 자동 생성된 대본·자막·음성에는 오류가 포함될 수 있으며, 서비스는 결과물의 정확성을 보장하지 않습니다.
@@ -51,12 +51,12 @@ export default async function PolicyPage({ params }) {
 
   return (
     <div style={{ maxWidth: 640, margin: '40px auto', padding: '0 16px' }}>
-      <a href="/" style={{ fontSize: 13, color: '#9ca3af' }}>
+      <a href="/" style={{ fontSize: 13, color: '#9c9cb5' }}>
         ← 돌아가기
       </a>
       <div className="card" style={{ marginTop: 16, padding: 32 }}>
         <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>{data.title}</h1>
-        <div style={{ fontSize: 14, color: '#4b5563', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{data.body}</div>
+        <div style={{ fontSize: 14, color: '#c7c7d9', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{data.body}</div>
       </div>
     </div>
   );

@@ -2,12 +2,23 @@
   box-sizing: border-box;
 }
 
+:root {
+  --grad: linear-gradient(135deg, #fb923c, #ec4899, #8b5cf6);
+  --grad-text: linear-gradient(135deg, #fdba74, #f472b6, #a78bfa);
+  --bg: #0b0b12;
+  --surface: #14141f;
+  --surface-2: #1c1c2b;
+  --border: #2a2a3c;
+  --text: #f4f4f8;
+  --text-dim: #9c9cb5;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
-  background: #f5f6f8;
-  color: #16181d;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
 }
 
@@ -36,9 +47,11 @@ textarea {
 .sidebar {
   width: 220px;
   flex-shrink: 0;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-logo {
@@ -48,15 +61,19 @@ textarea {
   display: flex;
   align-items: center;
   gap: 8px;
+  background: var(--grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .sidebar-cta {
   display: block;
-  background: #16181d;
+  background: var(--grad);
   color: #fff;
   text-align: center;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-weight: 700;
   margin-bottom: 20px;
 }
@@ -65,15 +82,15 @@ textarea {
   display: block;
   padding: 10px 12px;
   border-radius: 8px;
-  color: #4b5563;
+  color: var(--text-dim);
   font-size: 14px;
   margin-bottom: 2px;
 }
 
 .sidebar-nav a.active,
 .sidebar-nav a:hover {
-  background: #f2f3f5;
-  color: #16181d;
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .main {
@@ -89,16 +106,17 @@ textarea {
 }
 
 .page-sub {
-  color: #6b7280;
+  color: var(--text-dim);
   font-size: 14px;
   margin: 0 0 28px;
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   padding: 20px;
+  color: var(--text);
 }
 
 .project-grid {
@@ -109,19 +127,19 @@ textarea {
 
 .project-card {
   display: block;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface);
 }
 
 .project-thumb {
   aspect-ratio: 9/16;
-  background: #111318;
+  background: #05050a;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--text-dim);
   font-size: 12px;
 }
 
@@ -153,20 +171,20 @@ textarea {
 }
 
 .badge.queued {
-  background: #eef2ff;
-  color: #4338ca;
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
 }
 .badge.processing {
-  background: #fff7ed;
-  color: #c2410c;
+  background: rgba(251, 146, 60, 0.15);
+  color: #fdba74;
 }
 .badge.completed {
-  background: #ecfdf5;
-  color: #047857;
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
 }
 .badge.failed {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: rgba(244, 63, 94, 0.15);
+  color: #fda4af;
 }
 
 .field {
@@ -186,14 +204,15 @@ textarea {
 .field select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .field-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: var(--text-dim);
   margin-top: 4px;
 }
 
@@ -204,26 +223,26 @@ textarea {
 }
 
 .pill {
-  border: 1px solid #d1d5db;
-  background: #fff;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   border-radius: 999px;
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-dim);
 }
 
 .pill.selected {
-  background: #16181d;
+  background: var(--grad);
   color: #fff;
-  border-color: #16181d;
+  border-color: transparent;
 }
 
 .primary-btn {
-  background: #16181d;
+  background: var(--grad);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 12px 22px;
   font-weight: 700;
   font-size: 14px;
@@ -254,7 +273,7 @@ textarea {
 .tab-row {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
 }
 
@@ -264,13 +283,13 @@ textarea {
   padding: 10px 14px;
   font-size: 13px;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--text-dim);
   border-bottom: 2px solid transparent;
 }
 
 .tab-row button.active {
-  color: #16181d;
-  border-bottom-color: #16181d;
+  color: var(--text);
+  border-bottom-color: #ec4899;
 }
 
 .status-row {
@@ -285,16 +304,16 @@ textarea {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
-  background: #f2f3f5;
-  color: #9ca3af;
+  background: var(--surface-2);
+  color: var(--text-dim);
 }
 
 .step.done {
-  background: #ecfdf5;
-  color: #047857;
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
 }
 
 .step.current {
-  background: #eef2ff;
-  color: #4338ca;
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
 }

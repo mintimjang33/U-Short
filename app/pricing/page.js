@@ -6,7 +6,7 @@ const PLANS = [
     cta: '무료 시작',
     credits: '3크레딧 · 기본 쇼츠 최대 3개',
     included: ['프로젝트 생성 3회 / 월', 'AI 목소리 3,000자 / 월'],
-    features: ['1080p 해상도', '링크 분석', 'AI 대본 생성', '슈퍼쇼츠 워터마크 포함', '모든 템플릿', '프로젝트 30일 보관'],
+    features: ['1080p 해상도', '링크 분석', 'AI 대본 생성', 'UShort 워터마크 포함', '모든 템플릿', '프로젝트 30일 보관'],
   },
   {
     name: '라이트',
@@ -75,7 +75,7 @@ const PLANS = [
 const FAQ = [
   {
     q: '무료 플랜은 어떤 기능을 제공하나요?',
-    a: '로그인만 하면 매월 프로젝트 생성 3회와 AI목소리 3,000자를 무료로 이용할 수 있으며, 내보낸 결과물에는 슈퍼쇼츠 워터마크가 포함됩니다.',
+    a: '로그인만 하면 매월 프로젝트 생성 3회와 AI목소리 3,000자를 무료로 이용할 수 있으며, 내보낸 결과물에는 UShort 워터마크가 포함됩니다.',
   },
   { q: '플랜 변경은 언제 적용되나요?', a: '업그레이드는 즉시 적용되며, 다운그레이드는 다음 결제 주기부터 적용됩니다.' },
   { q: '크레딧이 뭔가요?', a: '1프로젝트는 1크레딧입니다. 새 프로젝트를 만들거나 새 버전으로 재생성할 때 1크레딧이 사용됩니다.' },
@@ -95,11 +95,13 @@ const FAQ = [
   },
 ];
 
+const GRADIENT = 'linear-gradient(135deg, #fb923c, #ec4899, #8b5cf6)';
+
 export default function PricingPage() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
-        <a href="/" style={{ fontSize: 13, color: '#9ca3af' }}>
+        <a href="/" style={{ fontSize: 13, color: '#9c9cb5' }}>
           ← 돌아가기
         </a>
         <h1 style={{ fontSize: 32, fontWeight: 800, marginTop: 16 }}>
@@ -116,7 +118,7 @@ export default function PricingPage() {
             className="card"
             style={{
               padding: 24,
-              border: plan.highlight ? '2px solid rgb(17,24,39)' : undefined,
+              border: plan.highlight ? '2px solid #ec4899' : undefined,
               position: 'relative',
             }}
           >
@@ -126,7 +128,7 @@ export default function PricingPage() {
                   position: 'absolute',
                   top: -10,
                   left: 20,
-                  background: 'rgb(17,24,39)',
+                  backgroundImage: GRADIENT,
                   color: '#fff',
                   fontSize: 11,
                   fontWeight: 700,
@@ -138,15 +140,15 @@ export default function PricingPage() {
               </div>
             )}
             <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 4 }}>{plan.name}</div>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16, minHeight: 32 }}>{plan.desc}</div>
+            <div style={{ fontSize: 12, color: '#9c9cb5', marginBottom: 16, minHeight: 32 }}>{plan.desc}</div>
             {plan.discount && (
-              <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 700, marginBottom: 2 }}>
-                {plan.discount} <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{plan.originalPrice}</span>
+              <div style={{ fontSize: 11, color: '#fb7185', fontWeight: 700, marginBottom: 2 }}>
+                {plan.discount} <span style={{ textDecoration: 'line-through', color: '#6b6b85' }}>{plan.originalPrice}</span>
               </div>
             )}
             <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 16 }}>
               {plan.price}
-              {plan.priceSuffix && <span style={{ fontSize: 13, fontWeight: 400, color: '#9ca3af' }}> {plan.priceSuffix}</span>}
+              {plan.priceSuffix && <span style={{ fontSize: 13, fontWeight: 400, color: '#9c9cb5' }}> {plan.priceSuffix}</span>}
             </div>
             <a
               href="/login"
@@ -155,9 +157,10 @@ export default function PricingPage() {
                 textAlign: 'center',
                 padding: '10px 0',
                 borderRadius: 9999,
-                background: plan.highlight ? 'rgb(17,24,39)' : '#fff',
-                color: plan.highlight ? '#fff' : 'rgb(2,8,23)',
-                border: plan.highlight ? 'none' : '1px solid #e5e7eb',
+                backgroundImage: plan.highlight ? GRADIENT : undefined,
+                background: plan.highlight ? undefined : '#1c1c2b',
+                color: '#fff',
+                border: plan.highlight ? 'none' : '1px solid #2a2a3c',
                 fontWeight: 600,
                 fontSize: 13,
                 marginBottom: 20,
@@ -165,15 +168,15 @@ export default function PricingPage() {
             >
               {plan.cta}
             </a>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 8 }}>{plan.credits}</div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#f4f4f8', marginBottom: 8 }}>{plan.credits}</div>
+            <div style={{ fontSize: 12, color: '#9c9cb5', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {plan.included.map((i) => (
                 <div key={i}>· {i}</div>
               ))}
             </div>
-            <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ borderTop: '1px solid #2a2a3c', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {plan.features.map((f) => (
-                <div key={f} style={{ fontSize: 12, color: '#374151' }}>
+                <div key={f} style={{ fontSize: 12, color: '#c7c7d9' }}>
                   ✓ {f}
                 </div>
               ))}
@@ -183,12 +186,12 @@ export default function PricingPage() {
       </div>
 
       <div className="card" style={{ padding: 32, textAlign: 'center', marginBottom: 64 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af', marginBottom: 8 }}>ENTERPRISE</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#9c9cb5', marginBottom: 8 }}>ENTERPRISE</div>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>엔터프라이즈 기업 문의</div>
-        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
-          슈퍼쇼츠 시스템의 맞춤형 도입이 필요하신가요? 기업 환경에 맞는 구성과 도입 방법을 빠르게 안내해드립니다.
+        <p style={{ fontSize: 13, color: '#9c9cb5', marginBottom: 16 }}>
+          UShort 시스템의 맞춤형 도입이 필요하신가요? 기업 환경에 맞는 구성과 도입 방법을 빠르게 안내해드립니다.
         </p>
-        <div style={{ fontSize: 12, color: '#9ca3af' }}>SDK 연동 · 화이트라벨링 · 맞춤형 워크플로</div>
+        <div style={{ fontSize: 12, color: '#9c9cb5' }}>SDK 연동 · 화이트라벨링 · 맞춤형 워크플로</div>
       </div>
 
       <div>
@@ -197,13 +200,13 @@ export default function PricingPage() {
           {FAQ.map((item) => (
             <div key={item.q} className="card" style={{ padding: 20 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{item.q}</div>
-              <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{item.a}</div>
+              <div style={{ fontSize: 13, color: '#9c9cb5', lineHeight: 1.6 }}>{item.a}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ textAlign: 'center', marginTop: 48, fontSize: 12, color: '#d1d5db' }}>
+      <div style={{ textAlign: 'center', marginTop: 48, fontSize: 12, color: '#6b6b85' }}>
         <a href="/policy/terms" style={{ color: 'inherit' }}>
           이용약관
         </a>

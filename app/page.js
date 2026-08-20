@@ -6,6 +6,9 @@ const scriptTypes = [
   { n: 3, label: '정보 나열형 대본' },
 ];
 
+const GRADIENT = 'linear-gradient(135deg, #fb923c, #ec4899, #8b5cf6)';
+const GRADIENT_TEXT = 'linear-gradient(135deg, #fdba74, #f472b6, #a78bfa)';
+
 export default async function LandingPage() {
   const user = await getCurrentUser();
   const ctaHref = user ? '/dashboard' : '/login';
@@ -20,13 +23,24 @@ export default async function LandingPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '18px 32px',
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid #22222f',
         }}
       >
-        <a href="/" aria-label="슈퍼쇼츠 홈" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
-          <span style={{ fontWeight: 800, fontSize: 16 }}>⚡ 슈퍼쇼츠</span>
+        <a href="/" aria-label="UShort 홈" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+          <span
+            style={{
+              fontWeight: 800,
+              fontSize: 18,
+              backgroundImage: GRADIENT_TEXT,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            ⚡ UShort
+          </span>
         </a>
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 32, fontSize: 14, color: '#6b7280' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 32, fontSize: 14, color: '#9c9cb5' }}>
           <a href="#preview" style={{ color: 'inherit' }}>
             쇼츠 둘러보기
           </a>
@@ -46,7 +60,7 @@ export default async function LandingPage() {
             height: 36,
             padding: '0 20px',
             borderRadius: 9999,
-            background: 'rgb(17,24,39)',
+            backgroundImage: GRADIENT,
             color: '#fff',
             fontSize: 14,
             fontWeight: 600,
@@ -63,8 +77,9 @@ export default async function LandingPage() {
           style={{
             display: 'inline-block',
             fontSize: 13,
-            color: '#6b7280',
-            background: '#f3f4f6',
+            color: '#c4b5fd',
+            background: 'rgba(139,92,246,0.12)',
+            border: '1px solid rgba(139,92,246,0.3)',
             borderRadius: 9999,
             padding: '6px 16px',
             marginBottom: 24,
@@ -72,17 +87,26 @@ export default async function LandingPage() {
         >
           크리에이터가 선택한 AI 자동 쇼츠 제작 생성기
         </div>
-        <h1 style={{ fontSize: 48, fontWeight: 800, lineHeight: 1.25, marginBottom: 20, color: 'rgb(2,8,23)' }}>
-          슈퍼쇼츠,
+        <h1 style={{ fontSize: 48, fontWeight: 800, lineHeight: 1.25, marginBottom: 20 }}>
+          <span
+            style={{
+              backgroundImage: GRADIENT_TEXT,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              color: 'transparent',
+            }}
+          >
+            UShort,
+          </span>
           <br />
-          블로그 URL로 쇼츠를
+          URL로 쇼츠를
           <br />
           1분 자동 제작
         </h1>
-        <p style={{ fontSize: 16, color: '#6b7280', marginBottom: 32, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 16, color: '#9c9cb5', marginBottom: 32, lineHeight: 1.6 }}>
           대본, 자막, 목소리까지
           <br />
-          슈퍼쇼츠로 빠르고 쉽게 해결해 보세요.
+          UShort로 빠르고 쉽게 해결해 보세요.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
           <a
@@ -90,7 +114,7 @@ export default async function LandingPage() {
             style={{
               padding: '12px 28px',
               borderRadius: 9999,
-              background: 'rgb(17,24,39)',
+              backgroundImage: GRADIENT,
               color: '#fff',
               fontWeight: 600,
               fontSize: 14,
@@ -103,9 +127,9 @@ export default async function LandingPage() {
             style={{
               padding: '12px 28px',
               borderRadius: 9999,
-              border: '1px solid #e5e7eb',
-              background: '#fff',
-              color: 'rgb(2,8,23)',
+              border: '1px solid #2a2a3c',
+              background: '#14141f',
+              color: '#f4f4f8',
               fontWeight: 600,
               fontSize: 14,
             }}
@@ -116,7 +140,7 @@ export default async function LandingPage() {
       </section>
 
       <section id="preview" className="card" style={{ maxWidth: 760, margin: '0 auto 64px', padding: 40 }}>
-        <p style={{ textAlign: 'center', fontSize: 13, color: '#9ca3af', fontWeight: 700, marginBottom: 24 }}>
+        <p style={{ textAlign: 'center', fontSize: 13, color: '#9c9cb5', fontWeight: 700, marginBottom: 24 }}>
           대본·자막·목소리까지 자동 · 평균 1분 완성
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -129,8 +153,9 @@ export default async function LandingPage() {
                 gap: 8,
                 padding: '8px 16px',
                 borderRadius: 9999,
-                background: '#f9fafb',
+                background: '#1c1c2b',
                 fontSize: 13,
+                color: '#f4f4f8',
               }}
             >
               <span
@@ -138,7 +163,7 @@ export default async function LandingPage() {
                   width: 20,
                   height: 20,
                   borderRadius: '50%',
-                  background: 'rgb(17,24,39)',
+                  backgroundImage: GRADIENT,
                   color: '#fff',
                   fontSize: 11,
                   display: 'flex',
@@ -154,9 +179,9 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section style={{ textAlign: 'center', padding: '48px 24px', background: '#fafafa' }}>
+      <section style={{ textAlign: 'center', padding: '48px 24px', background: '#0e0e17' }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>지금도 쌓이는 유저들의 쇼츠</h2>
-        <p style={{ color: '#6b7280', marginBottom: 24 }}>
+        <p style={{ color: '#9c9cb5', marginBottom: 24 }}>
           블로거·크리에이터가 만든 쇼츠가 끊임없이 만들어지고 있어요.
         </p>
         <a
@@ -165,8 +190,9 @@ export default async function LandingPage() {
             display: 'inline-block',
             padding: '10px 24px',
             borderRadius: 9999,
-            border: '1px solid #e5e7eb',
-            background: '#fff',
+            border: '1px solid #2a2a3c',
+            background: '#14141f',
+            color: '#f4f4f8',
             fontWeight: 600,
             fontSize: 14,
           }}
@@ -177,7 +203,7 @@ export default async function LandingPage() {
 
       <section style={{ textAlign: 'center', padding: '64px 24px' }}>
         <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>실제 폰에서 보는 것처럼, 세로 피드</h2>
-        <p style={{ color: '#6b7280', marginBottom: 24 }}>
+        <p style={{ color: '#9c9cb5', marginBottom: 24 }}>
           릴스·쇼츠처럼 세로 9:16 그대로, 폰에서 보던 느낌으로 재생돼요.
         </p>
         <a
@@ -186,7 +212,7 @@ export default async function LandingPage() {
             display: 'inline-block',
             padding: '10px 24px',
             borderRadius: 9999,
-            background: 'rgb(17,24,39)',
+            backgroundImage: GRADIENT,
             color: '#fff',
             fontWeight: 600,
             fontSize: 14,
@@ -196,7 +222,7 @@ export default async function LandingPage() {
         </a>
       </section>
 
-      <footer style={{ borderTop: '1px solid #f0f0f0', padding: '48px 32px', fontSize: 13, color: '#9ca3af' }}>
+      <footer style={{ borderTop: '1px solid #22222f', padding: '48px 32px', fontSize: 13, color: '#9c9cb5' }}>
         <div
           style={{
             maxWidth: 960,
@@ -208,45 +234,60 @@ export default async function LandingPage() {
           }}
         >
           <div>
-            <div style={{ fontWeight: 800, color: '#111827', marginBottom: 8 }}>⚡ 슈퍼쇼츠</div>
-            <div>블로그 링크로 쇼츠를 자동 제작하는 AI 숏폼 영상 서비스</div>
-            <div style={{ marginTop: 4 }}>블로그 글만으로 쇼츠를 만들어보세요</div>
+            <div
+              style={{
+                fontWeight: 800,
+                marginBottom: 8,
+                backgroundImage: GRADIENT_TEXT,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              ⚡ UShort
+            </div>
+            <div>URL로 쇼츠를 자동 제작하는 AI 숏폼 영상 서비스</div>
+            <div style={{ marginTop: 4 }}>URL 하나만으로 쇼츠를 만들어보세요</div>
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: '#111827', marginBottom: 8 }}>서비스</div>
+            <div style={{ fontWeight: 700, color: '#f4f4f8', marginBottom: 8 }}>서비스</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <a href={ctaHref} style={{ color: '#9ca3af' }}>
+              <a href={ctaHref} style={{ color: '#9c9cb5' }}>
                 새로 제작
               </a>
-              <span>가격 안내</span>
+              <a href="/pricing" style={{ color: '#9c9cb5' }}>
+                가격 안내
+              </a>
             </div>
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: '#111827', marginBottom: 8 }}>지원</div>
+            <div style={{ fontWeight: 700, color: '#f4f4f8', marginBottom: 8 }}>지원</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span>문의하기</span>
               <span>팀 소개</span>
-              <span>공지사항</span>
+              <a href="/notices" style={{ color: '#9c9cb5' }}>
+                공지사항
+              </a>
             </div>
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: '#111827', marginBottom: 8 }}>법적 정보</div>
+            <div style={{ fontWeight: 700, color: '#f4f4f8', marginBottom: 8 }}>법적 정보</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <a href="/policy/terms" style={{ color: '#9ca3af' }}>
+              <a href="/policy/terms" style={{ color: '#9c9cb5' }}>
                 이용약관
               </a>
-              <a href="/policy/privacy" style={{ color: '#9ca3af' }}>
+              <a href="/policy/privacy" style={{ color: '#9c9cb5' }}>
                 개인정보처리방침
               </a>
-              <a href="/policy/refund" style={{ color: '#9ca3af' }}>
+              <a href="/policy/refund" style={{ color: '#9c9cb5' }}>
                 환불정책
               </a>
             </div>
           </div>
         </div>
-        <div style={{ maxWidth: 960, margin: '0 auto', borderTop: '1px solid #f3f4f6', paddingTop: 20, lineHeight: 1.8 }}>
-          <div>운영: 비즈니스 지원센터 (개인용 클론 프로젝트 — 실제 사업자 정보 아님)</div>
-          <div>© 2026 슈퍼쇼츠(SuperShorts 클론). All rights reserved.</div>
+        <div style={{ maxWidth: 960, margin: '0 auto', borderTop: '1px solid #1c1c2b', paddingTop: 20, lineHeight: 1.8 }}>
+          <div>상호명: 비즈니스 지원센터</div>
+          <div>© 2026 UShort. All rights reserved.</div>
         </div>
       </footer>
     </div>

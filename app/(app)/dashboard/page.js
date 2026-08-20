@@ -49,18 +49,18 @@ export default async function DashboardPage() {
   return (
     <div>
       <h1 className="page-title">내 프로젝트</h1>
-      <p className="page-sub">블로그 링크만 넣으면 AI가 쇼츠 영상을 자동으로 만들어줘요.</p>
+      <p className="page-sub">URL만 넣으면 AI가 쇼츠 영상을 자동으로 만들어줘요.</p>
 
       {!loadError && projects.length > 0 && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
           <div className="card" style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 700 }}>완료된 영상</div>
+            <div style={{ fontSize: 12, color: '#9c9cb5', fontWeight: 700 }}>완료된 영상</div>
             <div style={{ fontSize: 24, fontWeight: 800 }}>{completedCount}개</div>
           </div>
           <div className="card" style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 700 }}>누적 사용 크레딧</div>
+            <div style={{ fontSize: 12, color: '#9c9cb5', fontWeight: 700 }}>누적 사용 크레딧</div>
             <div style={{ fontSize: 24, fontWeight: 800 }}>{totalCredits}</div>
-            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: '#9c9cb5', marginTop: 2 }}>
               지금은 실제 과금/제한은 없고 기록용이에요 (짧게=1, 길게=2)
             </div>
           </div>
@@ -68,9 +68,9 @@ export default async function DashboardPage() {
       )}
 
       {loadError && (
-        <div className="card" style={{ marginBottom: 20, color: '#b91c1c' }}>
+        <div className="card" style={{ marginBottom: 20, color: '#fda4af' }}>
           {loadError}
-          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
+          <div style={{ fontSize: 12, color: '#9c9cb5', marginTop: 6 }}>
             Supabase 연결이 아직 안 됐다면 .env.local과 supabase/schema.sql 적용 여부를 확인하세요.
           </div>
         </div>
@@ -78,7 +78,7 @@ export default async function DashboardPage() {
 
       {!loadError && projects.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 60 }}>
-          <p style={{ marginBottom: 16, color: '#6b7280' }}>아직 프로젝트가 없어요.</p>
+          <p style={{ marginBottom: 16, color: '#9c9cb5' }}>아직 프로젝트가 없어요.</p>
           <a className="primary-btn" href="/new">
             + 첫 프로젝트 만들기
           </a>

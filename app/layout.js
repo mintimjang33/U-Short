@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: '슈퍼쇼츠 클론',
-  description: '블로그 URL로 쇼츠를 자동 제작하는 개인용 로컬 도구',
+  title: 'UShort',
+  description: 'URL로 쇼츠를 자동 제작하는 AI 숏폼 영상 서비스',
 };
 
 export default function RootLayout({ children }) {

@@ -85,7 +85,7 @@ export default function NewProjectPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (sourceMode === 'link' && !sourceUrl.trim()) {
-      setError('블로그 URL을 입력해주세요.');
+      setError('URL을 입력해주세요.');
       return;
     }
     if (sourceMode === 'manual' && manualText.trim().length < 10) {
@@ -138,7 +138,7 @@ export default function NewProjectPage() {
           <label>소스</label>
           <div className="pill-group">
             <Pill selected={sourceMode === 'link'} onClick={() => setSourceMode('link')}>
-              🔗 블로그 링크
+              🔗 URL
             </Pill>
             <Pill selected={sourceMode === 'manual'} onClick={() => setSourceMode('manual')}>
               📝 직접 대본 작성
@@ -148,7 +148,7 @@ export default function NewProjectPage() {
 
         {sourceMode === 'link' ? (
           <div className="field">
-            <label>블로그 URL</label>
+            <label>URL</label>
             <input
               type="url"
               placeholder="https://blog.naver.com/..."
@@ -239,7 +239,7 @@ export default function NewProjectPage() {
           <label>배경 이미지 (선택, 안 넣으면 블로그 대표 이미지를 자동으로 씀)</label>
           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleFileUpload} />
           {uploading && <div className="field-hint">업로드 중...</div>}
-          {uploadError && <div className="field-hint" style={{ color: '#b91c1c' }}>{uploadError}</div>}
+          {uploadError && <div className="field-hint" style={{ color: '#fda4af' }}>{uploadError}</div>}
           {backgroundImageUrl && (
             <div className="field-hint">
               업로드됨: <a href={backgroundImageUrl} target="_blank" rel="noreferrer">미리보기</a>{' '}
@@ -296,7 +296,7 @@ export default function NewProjectPage() {
           </div>
         </div>
 
-        {error && <div style={{ color: '#b91c1c', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+        {error && <div style={{ color: '#fda4af', marginBottom: 16, fontSize: 13 }}>{error}</div>}
 
         <button type="submit" className="primary-btn" disabled={submitting}>
           {submitting ? '제작 요청 중...' : '쇼츠 만들기'}

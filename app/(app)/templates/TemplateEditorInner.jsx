@@ -171,7 +171,7 @@ export default function TemplateEditorInner() {
       <div className="field">
         <label>저장된 템플릿에서 불러오기</label>
         {templatesLoading && <div className="field-hint">불러오는 중...</div>}
-        {templatesError && <div className="field-hint" style={{ color: '#b91c1c' }}>{templatesError}</div>}
+        {templatesError && <div className="field-hint" style={{ color: '#fda4af' }}>{templatesError}</div>}
         {!templatesLoading && !templatesError && (
           <select value={loadedTemplateId || ''} onChange={(e) => handleLoadTemplate(e.target.value || null)}>
             <option value="">-- 새 템플릿 (저장된 템플릿 없음) --</option>
@@ -298,7 +298,7 @@ export default function TemplateEditorInner() {
             )}
             <button
               className="primary-btn"
-              style={loadedTemplateId ? { background: '#fff', color: '#16181d', border: '1px solid #d1d5db' } : undefined}
+              style={loadedTemplateId ? { background: '#1c1c2b', color: '#f4f4f8', border: '1px solid #6b6b85' } : undefined}
               onClick={handleSaveAsNew}
               disabled={saving}
             >
@@ -310,9 +310,9 @@ export default function TemplateEditorInner() {
                 onClick={handleDelete}
                 disabled={deleting}
                 style={{
-                  background: '#fff',
-                  color: '#b91c1c',
-                  border: '1px solid #fecaca',
+                  background: '#1c1c2b',
+                  color: '#fda4af',
+                  border: '1px solid rgba(244,63,94,0.35)',
                   borderRadius: 10,
                   padding: '12px 22px',
                   fontWeight: 700,

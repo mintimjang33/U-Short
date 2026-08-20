@@ -18,9 +18,9 @@ export default function SignOutButton() {
       onClick={onSignOut}
       style={{
         fontSize: 12,
-        color: '#6b7280',
+        color: '#9c9cb5',
         background: 'none',
-        border: '1px solid #e5e7eb',
+        border: '1px solid #2a2a3c',
         borderRadius: 8,
         padding: '6px 10px',
         cursor: 'pointer',

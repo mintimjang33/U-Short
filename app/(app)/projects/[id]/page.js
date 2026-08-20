@@ -89,13 +89,13 @@ export default function ProjectStatusPage({ params }) {
         {job?.projects?.title_line1 || job?.projects?.source_url || '프로젝트 진행 상태를 확인하세요.'}
       </p>
 
-      {error && <div className="card" style={{ color: '#b91c1c', marginBottom: 16 }}>{error}</div>}
+      {error && <div className="card" style={{ color: '#fda4af', marginBottom: 16 }}>{error}</div>}
 
       {!job && !error && <div className="card">불러오는 중...</div>}
 
       {job && job.status === 'failed' && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <p style={{ color: '#b91c1c', marginTop: 0 }}>제작에 실패했습니다: {job.error_message}</p>
+          <p style={{ color: '#fda4af', marginTop: 0 }}>제작에 실패했습니다: {job.error_message}</p>
           <button className="primary-btn" onClick={handleRetry} disabled={retrying}>
             {retrying ? '다시 시도하는 중...' : '같은 설정으로 다시 시도'}
           </button>
@@ -133,7 +133,7 @@ export default function ProjectStatusPage({ params }) {
               </div>
             </div>
           ) : job.status !== 'failed' ? (
-            <p style={{ color: '#6b7280', fontSize: 13 }}>
+            <p style={{ color: '#9c9cb5', fontSize: 13 }}>
               제작 중입니다... (자동으로 2초마다 상태를 갱신해요)
             </p>
           ) : null}
@@ -148,8 +148,8 @@ export default function ProjectStatusPage({ params }) {
             disabled={deleting}
             style={{
               background: 'none',
-              border: '1px solid #fecaca',
-              color: '#b91c1c',
+              border: '1px solid rgba(244,63,94,0.35)',
+              color: '#fda4af',
               borderRadius: 10,
               padding: '10px 18px',
               fontWeight: 700,
