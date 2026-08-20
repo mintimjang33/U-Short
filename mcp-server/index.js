@@ -127,6 +127,10 @@ server.registerTool(
       captionPresetId: z.string().optional().describe('기본 existing-preset-bold-white-outline, list_options로 전체 목록 확인 가능'),
       scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional().describe('기본 claude'),
       voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional().describe('기본 fal'),
+      voice: z
+        .enum(['seoa', 'hajun', 'taeo', 'ina', 'doyun', 'jihoon', 'yuna', 'minjae', 'luna', 'harin', 'seojun', 'daon', 'mio', 'haru', 'ren', 'oliver', 'noah', 'emma', 'liam', 'ava', 'chloe', 'adam', 'jay'])
+        .optional()
+        .describe('음성 페르소나(voiceProvider가 fal일 때만 적용). 생략시 기본 보이스. list_options의 voicePresets로 이름/설명 확인 가능'),
       backgroundColor: z.string().optional().describe('기본 #0a0a0a'),
       backgroundImageUrl: z.string().optional().describe('비우면 대표 이미지를 자동으로 씀'),
       backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL (upload_asset으로 먼저 업로드)'),
@@ -149,6 +153,7 @@ server.registerTool(
         captionPresetId,
         scriptProvider,
         voiceProvider,
+        voice,
         backgroundColor,
         backgroundImageUrl,
         backgroundVideoUrl,
@@ -171,6 +176,7 @@ server.registerTool(
         lengthMode: lengthMode || defaults.length_mode || 'shortform',
         scriptProvider: scriptProvider || defaults.script_provider || 'claude',
         voiceProvider: voiceProvider || defaults.voice_provider || 'fal',
+        voice: voice || defaults.voice_id || null,
         introEnabled: introEnabled ?? defaults.intro_enabled ?? false,
         introTemplateId: introTemplateId || defaults.intro_template_id || null,
         introDisplayOnly: true,
@@ -359,6 +365,7 @@ server.registerTool(
       introTemplates: OPTIONS.INTRO_TEMPLATE_LIST,
       scriptProviders: OPTIONS.SCRIPT_PROVIDERS,
       voiceProviders: OPTIONS.VOICE_PROVIDERS,
+      voicePresets: OPTIONS.VOICE_PRESET_LIST,
       scriptStyles: OPTIONS.SCRIPT_STYLES,
       outputLanguages: OPTIONS.OUTPUT_LANGUAGES,
       lengthModes: OPTIONS.LENGTH_MODES,

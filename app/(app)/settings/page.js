@@ -7,10 +7,13 @@ import {
   INTRO_TEMPLATE_LIST,
   SCRIPT_PROVIDERS,
   VOICE_PROVIDERS,
+  VOICE_PRESET_LIST,
   LENGTH_MODES,
   OUTPUT_LANGUAGES,
   SCRIPT_STYLES,
 } from '../../../lib/options.js';
+
+const VOICE_LANG_LABEL = { ko: '한국어', ja: '일본어', en: '영어', etc: '기타' };
 
 function Pill({ selected, onClick, children }) {
   return (
@@ -27,6 +30,7 @@ export default function SettingsPage() {
   const [introTemplateId, setIntroTemplateId] = useState('');
   const [scriptProvider, setScriptProvider] = useState('');
   const [voiceProvider, setVoiceProvider] = useState('');
+  const [voiceId, setVoiceId] = useState('');
   const [lengthMode, setLengthMode] = useState('');
   const [outputLanguage, setOutputLanguage] = useState('');
   const [style, setStyle] = useState('');
@@ -45,6 +49,7 @@ export default function SettingsPage() {
         setIntroTemplateId(data.intro_template_id || '');
         setScriptProvider(data.script_provider || '');
         setVoiceProvider(data.voice_provider || '');
+        setVoiceId(data.voice_id || '');
         setLengthMode(data.length_mode || '');
         setOutputLanguage(data.output_language || '');
         setStyle(data.style || '');
@@ -71,6 +76,7 @@ export default function SettingsPage() {
           introTemplateId: introTemplateId || null,
           scriptProvider: scriptProvider || null,
           voiceProvider: voiceProvider || null,
+          voiceId: voiceId || null,
           lengthMode: lengthMode || null,
           outputLanguage: outputLanguage || null,
           style: style || null,
@@ -195,6 +201,20 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
+
+      {voiceProvider === 'fal' && (
+        <div className="field">
+          <label>기본 음성 페르소나</label>
+          <div className="pill-group">
+            <Pill selected={!voiceId} onClick={() => setVoiceId('')}>매번 직접 선택</Pill>
+            {VOICE_PRESET_LIST.map((v) => (
+              <Pill key={v.id} selected={voiceId === v.id} onClick={() => setVoiceId(v.id)}>
+                {VOICE_LANG_LABEL[v.lang]} · {v.name} — {v.description}
+              </Pill>
+            ))}
+          </div>
+        </div>
+      )}
 
       {message && <div className="field-hint" style={{ marginBottom: 12 }}>{message}</div>}
       <button className="primary-btn" onClick={handleSave} disabled={saving}>

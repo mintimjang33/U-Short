@@ -78,6 +78,10 @@ function buildServer() {
         captionPresetId: z.string().optional(),
         scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional(),
         voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional(),
+        voice: z
+          .enum(['seoa', 'hajun', 'taeo', 'ina', 'doyun', 'jihoon', 'yuna', 'minjae', 'luna', 'harin', 'seojun', 'daon', 'mio', 'haru', 'ren', 'oliver', 'noah', 'emma', 'liam', 'ava', 'chloe', 'adam', 'jay'])
+          .optional()
+          .describe('음성 페르소나(voiceProvider가 fal일 때만 적용). list_options의 voicePresets로 확인 가능'),
         backgroundColor: z.string().optional(),
         backgroundImageUrl: z.string().optional(),
         backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL'),
@@ -99,6 +103,7 @@ function buildServer() {
           lengthMode: args.lengthMode || defaults.length_mode || 'shortform',
           scriptProvider: args.scriptProvider || defaults.script_provider || 'claude',
           voiceProvider: args.voiceProvider || defaults.voice_provider || 'fal',
+          voice: args.voice || defaults.voice_id || null,
           introEnabled: args.introEnabled ?? defaults.intro_enabled ?? false,
           introTemplateId: args.introTemplateId || defaults.intro_template_id || null,
           introDisplayOnly: true,
@@ -209,6 +214,7 @@ function buildServer() {
         introTemplates: OPTIONS.INTRO_TEMPLATE_LIST,
         scriptProviders: OPTIONS.SCRIPT_PROVIDERS,
         voiceProviders: OPTIONS.VOICE_PROVIDERS,
+        voicePresets: OPTIONS.VOICE_PRESET_LIST,
         scriptStyles: OPTIONS.SCRIPT_STYLES,
         outputLanguages: OPTIONS.OUTPUT_LANGUAGES,
         lengthModes: OPTIONS.LENGTH_MODES,

@@ -10,8 +10,11 @@ import {
   CAPTION_PRESET_LIST,
   SCRIPT_PROVIDERS,
   VOICE_PROVIDERS,
+  VOICE_PRESET_LIST,
   INTRO_TEMPLATE_LIST,
 } from '../../../lib/options.js';
+
+const VOICE_LANG_LABEL = { ko: '한국어', ja: '일본어', en: '영어', etc: '기타' };
 
 function Pill({ selected, onClick, children }) {
   return (
@@ -33,6 +36,7 @@ export default function NewProjectPage() {
   const [captionPresetId, setCaptionPresetId] = useState(CAPTION_PRESET_LIST[0].id);
   const [scriptProvider, setScriptProvider] = useState('claude');
   const [voiceProvider, setVoiceProvider] = useState('fal');
+  const [voiceId, setVoiceId] = useState('');
   const [backgroundColor, setBackgroundColor] = useState('#0a0a0a');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
   const [backgroundVideoUrl, setBackgroundVideoUrl] = useState('');
@@ -133,6 +137,7 @@ export default function NewProjectPage() {
           captionPresetId,
           scriptProvider,
           voiceProvider,
+          voice: voiceId || null,
           introEnabled,
           introTemplateId,
           background: { color: backgroundColor, imageUrl: backgroundImageUrl || null, videoUrl: backgroundVideoUrl || null },
@@ -358,6 +363,20 @@ export default function NewProjectPage() {
             연습할 땐 ElevenLabs(무료 티어), 실전은 fal.ai, 대량 운영으로 넘어가면 CLOVA를 고려하세요.
           </div>
         </div>
+
+        {voiceProvider === 'fal' && (
+          <div className="field">
+            <label>음성 페르소나</label>
+            <div className="pill-group">
+              <Pill selected={!voiceId} onClick={() => setVoiceId('')}>기본 (Rachel)</Pill>
+              {VOICE_PRESET_LIST.map((v) => (
+                <Pill key={v.id} selected={voiceId === v.id} onClick={() => setVoiceId(v.id)}>
+                  {VOICE_LANG_LABEL[v.lang]} · {v.name} — {v.description}
+                </Pill>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && <div style={{ color: '#fda4af', marginBottom: 16, fontSize: 13 }}>{error}</div>}
 

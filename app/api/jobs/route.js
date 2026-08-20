@@ -30,7 +30,7 @@ export const POST = withApiErrorHandling(async (request) => {
     lengthMode: body.lengthMode || defaults.length_mode || 'shortform',
     scriptProvider: body.scriptProvider || defaults.script_provider || 'claude',
     voiceProvider: body.voiceProvider || defaults.voice_provider || 'fal',
-    voice: body.voice || null,
+    voice: body.voice || defaults.voice_id || null,
     introEnabled: body.introEnabled ?? defaults.intro_enabled ?? false,
     introTemplateId: body.introTemplateId || defaults.intro_template_id || null,
     introDisplayOnly: body.introDisplayOnly ?? true,

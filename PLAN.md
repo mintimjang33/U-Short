@@ -201,9 +201,17 @@ Vercel 서버리스 함수는 실행시간 제한 때문에 Remotion 렌더링�
 - **템플릿 목업(갤러리) 페이지 신규**: `app/(app)/templates/gallery/page.js` — 레이아웃 5종/자막프리셋 8종/인트로 10종을 실제 프리셋 데이터 파일 값 그대로 시각적으로 미리보기. 가짜 값 없음.
 - **네이버 뉴스 검색 MCP 도구 추가**: `search_naver_news` — `lib/naverNews.js`(신규, 프레시시즌의 실제 구현을 그대로 참고해 작성), 로컬/원격 MCP 둘 다 등록 완료. 자격증명(`NAVER_CLIENT_ID`/`SECRET`, developers.naver.com 검색 API)은 다른 AI/TTS 키와 동일하게 Supabase `app_config` 테이블에 저장해서 `loadRemoteConfig()`가 자동으로 불러옴 — 로컬/Vercel 둘 다 재배포 없이 씀. curl로 실제 API 응답 확인 완료(정상 작동).
 
+## 음성 페르소나 23종 추가 (2026-08-20 추가)
+
+- `lib/voicePresets.js`(신규): 실사이트 API 문서의 음성 alias 23종(seoa/하준/... 등, 한국어12·일본어3·영어6·기타2)을 그대로 가져오되, 우리 TTS 백엔드(fal.ai가 감싼 ElevenLabs eleven-v3)는 다른 보이스 라이브러리를 쓰기 때문에 fal.ai 공식 모델 페이지(fal.ai/models/fal-ai/elevenlabs/tts/eleven-v3)에서 실제로 문서화된 21개 보이스 이름(Aria/Roger/Sarah/...)으로 성별·톤이 비슷한 것을 하나씩 매핑했다. 21개 < 23개라 chloe/jay 2개는 다른 페르소나와 fal 보이스를 공유(주석에 명시).
+  - `lib/generateVoice.js`의 `synthesizeWithFal`이 `resolveFalVoice()`로 별칭(예: `seoa`)을 실제 fal 보이스 이름으로 변환. 실제 FAL_KEY로 `voice: 'seoa'` 합성 호출까지 실제 검증함(정상적으로 오디오 55KB 생성 확인).
+  - `/new`, `/settings`(자동화 기본값) 양쪽에 "음성 페르소나" Pill 선택 UI 추가(voiceProvider가 fal일 때만 노출). `automation_defaults` 테이블에 `voice_id` 컬럼 추가(스키마 파일 갱신 + 기존 DB용 ALTER 마이그레이션 SQL 전달함).
+  - 로컬/원격 MCP(`create_shorts`)에도 `voice` enum 파라미터 추가, `list_options`에 `voicePresets` 포함.
+  - **ElevenLabs(무료 티어) provider는 이번에 포함 안 함**: fal은 이름 기반이라 매핑 가능했지만 ElevenLabs 자체 API는 계정별 voiceId 해시를 쓰기 때문에 실제 계정 키로 `GET /v1/voices` 조회부터 필요함. 지금 `ELEVENLABS_API_KEY`가 app_config에 아예 없는 것도 확인함(코드 주석에도 "실제 키로 검증 못함"이라 적혀있었음). 사용자가 elevenlabs.io 무료 계정 만들어서 키를 주면 이어서 매핑 예정 — **다음 세션 이어갈 것**.
+
 ## 다음에 할 일 (우선순위 순, 사용자가 "어차피 다 해야 하는거야, 순차적으로" 라고 확인함)
 
-1. **음성 선택지 확장**: 지금 fal 보이스 1개 고정 → 여러 페르소나 선택 가능하게 (실사이트 23종 참고, 실제 제공 provider가 지원하는 보이스로 매핑) — 아직 미착수
+1. **ElevenLabs 무료 티어 음성 매핑**: 사용자가 elevenlabs.io 키 발급하면 실제 voice_id 조회해서 페르소나 매핑 이어가기
 2. **유튜브 지원**: 자막 PO 토큰 문제 재확인됨(여전히 막힘). 3가지 선택지(제목+설명만/`youtubei.js`/Puppeteer) 중 아직 미결정.
 3. `npm run worker`를 이 PC에서 상시 실행 상태로 유지 — 아직 상시 실행 체계는 안 갖춰짐
 

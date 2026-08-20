@@ -33,6 +33,7 @@ export const PUT = withApiErrorHandling(async (request) => {
     intro_template_id: body.introTemplateId || null,
     script_provider: body.scriptProvider || null,
     voice_provider: body.voiceProvider || null,
+    voice_id: body.voiceId || null,
     length_mode: body.lengthMode || null,
     output_language: body.outputLanguage || null,
     style: body.style || null,

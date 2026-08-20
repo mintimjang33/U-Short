@@ -78,6 +78,7 @@ create table if not exists automation_defaults (
   intro_template_id text,
   script_provider text,
   voice_provider text,
+  voice_id text,
   length_mode text,
   output_language text,
   style text,
