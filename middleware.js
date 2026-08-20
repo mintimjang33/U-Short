@@ -43,5 +43,7 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/|\\.well-known/).*)'],
+  // public/ 폴더의 정적 파일(랜딩페이지 목업 이미지 등)은 확장자로 걸러서 미들웨어를 안 타게 한다.
+  // 안 걸러지면 비로그인 방문자에게 이 파일들이 /login으로 리다이렉트되어 깨진 이미지로 보인다.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api/|\\.well-known/|.*\\.(?:jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|woff|woff2)$).*)'],
 };

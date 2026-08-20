@@ -68,7 +68,7 @@ export function ShortsMockupCard({ sample, width = 280, badge = true }) {
       {s.kind === 'info' && (
         <>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '62%', overflow: 'hidden' }}>
-            <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+            <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div
               style={{
                 position: 'absolute',
@@ -94,7 +94,7 @@ export function ShortsMockupCard({ sample, width = 280, badge = true }) {
 
       {s.kind === 'card' && (
         <div style={{ position: 'absolute', inset: 10 * scale, borderRadius: 24 * scale, overflow: 'hidden' }}>
-          <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+          <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.85) 100%)' }} />
           <div style={{ position: 'absolute', top: 28 * scale, left: 0, right: 0, textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 20 * scale, color: '#fff', padding: `0 ${20 * scale}px`, lineHeight: 1.25 }}>
             <div>{s.titleLine1}</div>
@@ -108,7 +108,7 @@ export function ShortsMockupCard({ sample, width = 280, badge = true }) {
 
       {s.kind === 'full-focused' && (
         <>
-          <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+          <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.75) 100%)' }} />
           <div style={{ position: 'absolute', top: 28 * scale, left: 0, right: 0, textAlign: 'center', fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 20 * scale, color: '#fff', padding: `0 ${22 * scale}px`, lineHeight: 1.25 }}>
             <div>{s.titleLine1}</div>
@@ -123,7 +123,7 @@ export function ShortsMockupCard({ sample, width = 280, badge = true }) {
       {s.kind === 'image-dark' && (
         <>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '62%', overflow: 'hidden' }}>
-            <div style={{ width: '100%', height: '100%', background: s.gradient }} />
+            <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div
               style={{
                 position: 'absolute',
