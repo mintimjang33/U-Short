@@ -1,4 +1,5 @@
 import { getCurrentUser } from '../lib/supabaseServerAuth.js';
+import { HeroShortsPreview } from './components/HeroShortsPreview.jsx';
 
 const scriptTypes = [
   { n: 1, label: '핵심 요약형 대본' },
@@ -72,71 +73,86 @@ export default async function LandingPage() {
         </a>
       </header>
 
-      <section style={{ textAlign: 'center', padding: '96px 24px 64px', maxWidth: 720, margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'inline-block',
-            fontSize: 13,
-            color: '#c4b5fd',
-            background: 'rgba(139,92,246,0.12)',
-            border: '1px solid rgba(139,92,246,0.3)',
-            borderRadius: 9999,
-            padding: '6px 16px',
-            marginBottom: 24,
-          }}
-        >
-          크리에이터가 선택한 AI 자동 쇼츠 제작 생성기
-        </div>
-        <h1 style={{ fontSize: 48, fontWeight: 800, lineHeight: 1.25, marginBottom: 20 }}>
-          <span
+      <section
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 64,
+          padding: '96px 24px 64px',
+          maxWidth: 1120,
+          margin: '0 auto',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div style={{ textAlign: 'left', maxWidth: 560 }}>
+          <div
             style={{
-              backgroundImage: GRADIENT_TEXT,
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              color: 'transparent',
-            }}
-          >
-            UShort,
-          </span>
-          <br />
-          URL로 쇼츠를
-          <br />
-          1분 자동 제작
-        </h1>
-        <p style={{ fontSize: 16, color: '#9c9cb5', marginBottom: 32, lineHeight: 1.6 }}>
-          대본, 자막, 목소리까지
-          <br />
-          UShort로 빠르고 쉽게 해결해 보세요.
-        </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-          <a
-            href={ctaHref}
-            style={{
-              padding: '12px 28px',
+              display: 'inline-block',
+              fontSize: 13,
+              color: '#c4b5fd',
+              background: 'rgba(139,92,246,0.12)',
+              border: '1px solid rgba(139,92,246,0.3)',
               borderRadius: 9999,
-              backgroundImage: GRADIENT,
-              color: '#fff',
-              fontWeight: 600,
-              fontSize: 14,
+              padding: '6px 16px',
+              marginBottom: 24,
             }}
           >
-            {heroLabel}
-          </a>
-          <a
-            href="#preview"
-            style={{
-              padding: '12px 28px',
-              borderRadius: 9999,
-              border: '1px solid #2a2a3c',
-              background: '#14141f',
-              color: '#f4f4f8',
-              fontWeight: 600,
-              fontSize: 14,
-            }}
-          >
-            샘플 보기
-          </a>
+            크리에이터가 선택한 AI 자동 쇼츠 제작 생성기
+          </div>
+          <h1 style={{ fontSize: 48, fontWeight: 800, lineHeight: 1.25, marginBottom: 20 }}>
+            <span
+              style={{
+                backgroundImage: GRADIENT_TEXT,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
+              UShort,
+            </span>
+            <br />
+            URL로 쇼츠를
+            <br />
+            1분 자동 제작
+          </h1>
+          <p style={{ fontSize: 16, color: '#9c9cb5', marginBottom: 32, lineHeight: 1.6 }}>
+            대본, 자막, 목소리까지
+            <br />
+            UShort로 빠르고 쉽게 해결해 보세요.
+          </p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <a
+              href={ctaHref}
+              style={{
+                padding: '12px 28px',
+                borderRadius: 9999,
+                backgroundImage: GRADIENT,
+                color: '#fff',
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              {heroLabel}
+            </a>
+            <a
+              href="#preview"
+              style={{
+                padding: '12px 28px',
+                borderRadius: 9999,
+                border: '1px solid #2a2a3c',
+                background: '#14141f',
+                color: '#f4f4f8',
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              샘플 보기
+            </a>
+          </div>
         </div>
+
+        <HeroShortsPreview />
       </section>
 
       <section id="preview" className="card" style={{ maxWidth: 760, margin: '0 auto 64px', padding: 40 }}>
