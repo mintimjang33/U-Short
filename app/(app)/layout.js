@@ -21,6 +21,16 @@ export default async function AppLayout({ children }) {
           <a href="/settings">자동화 기본값</a>
           {isOwner && <a href="/admin">관리자</a>}
         </nav>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#6b6b85', margin: '18px 0 6px', paddingLeft: 4 }}>실험실</div>
+        <nav className="sidebar-nav">
+          <a href="/lab/template-playground">템플릿 놀이터</a>
+        </nav>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#6b6b85', margin: '18px 0 6px', paddingLeft: 4 }}>개발자</div>
+        <nav className="sidebar-nav">
+          <a href="/dev/api-mcp">API / MCP</a>
+        </nav>
         <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid #2a2a3c' }}>
           <div style={{ fontSize: 12, color: '#9c9cb5', marginBottom: 8, wordBreak: 'break-all' }}>
             {user?.email}
