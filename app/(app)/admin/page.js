@@ -6,6 +6,23 @@ export default function AdminPage() {
   const [users, setUsers] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pkgError, setPkgError] = useState(null);
+  const [pkgLoading, setPkgLoading] = useState(false);
+
+  async function downloadWorkerPackage() {
+    setPkgLoading(true);
+    setPkgError(null);
+    try {
+      const res = await fetch('/api/admin/worker-package');
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || '다운로드 링크 발급 실패');
+      window.location.href = json.url;
+    } catch (e) {
+      setPkgError(e.message);
+    } finally {
+      setPkgLoading(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -38,6 +55,24 @@ export default function AdminPage() {
         <button onClick={load} className="primary-btn" style={{ padding: '6px 14px', fontSize: 13 }}>
           새로고침
         </button>
+      </div>
+
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: '#9c9cb5', marginBottom: 10 }}>
+          다른 PC에서 렌더링 워커를 돌리고 싶을 때, 이 소스 패키지를 받아서 압축 풀고 <code>npm install</code> 후
+          <code>워커_시작.bat</code>를 실행하세요. (관리자 계정으로 로그인했을 때만 다운로드 가능)
+        </div>
+        <button
+          onClick={downloadWorkerPackage}
+          className="primary-btn"
+          style={{ padding: '6px 14px', fontSize: 13 }}
+          disabled={pkgLoading}
+        >
+          {pkgLoading ? '링크 발급 중...' : '워커 패키지 다운로드'}
+        </button>
+        {pkgError && (
+          <div style={{ color: '#fda4af', fontSize: 12, marginTop: 8 }}>{pkgError}</div>
+        )}
       </div>
 
       {loading && <div className="card">불러오는 중...</div>}
