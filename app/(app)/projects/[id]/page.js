@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CAPTION_PRESET_LIST } from '../../../../lib/options.js';
 
 const STAGES = [
   { id: 'extract', label: '본문 추출' },
@@ -19,6 +20,11 @@ export default function ProjectStatusPage({ params }) {
   const [error, setError] = useState(null);
   const [retrying, setRetrying] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [scenes, setScenes] = useState([]);
+  const [sceneUploading, setSceneUploading] = useState(null); // 업로드 중인 장면 인덱스
+  const [savingScenes, setSavingScenes] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +56,10 @@ export default function ProjectStatusPage({ params }) {
     };
   }, [id]);
 
+  useEffect(() => {
+    if (job?.projects?.scenes) setScenes(job.projects.scenes);
+  }, [job?.projects?.scenes]);
+
   async function handleRetry() {
     if (!job) return;
     setRetrying(true);
@@ -80,7 +90,61 @@ export default function ProjectStatusPage({ params }) {
     }
   }
 
+  function getScene(i) {
+    return scenes[i] || {};
+  }
+
+  function updateScene(i, patch) {
+    setScenes((prev) => {
+      const next = [...prev];
+      next[i] = { ...(next[i] || {}), ...patch };
+      return next;
+    });
+  }
+
+  async function handleSceneImageUpload(i, e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSceneUploading(i);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '업로드 실패');
+      if (file.type.startsWith('video/')) {
+        updateScene(i, { videoUrl: data.url, imageUrl: undefined });
+      } else {
+        updateScene(i, { imageUrl: data.url, videoUrl: undefined });
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSceneUploading(null);
+    }
+  }
+
+  async function handleSaveScenes() {
+    setSavingScenes(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '저장에 실패했습니다.');
+      router.refresh();
+      window.location.reload();
+    } catch (err) {
+      setError(err.message);
+      setSavingScenes(false);
+    }
+  }
+
   const currentStageIndex = STAGES.findIndex((s) => s.id === job?.stage);
+  const captions = job?.projects?.captions || [];
 
   return (
     <div>
@@ -126,10 +190,15 @@ export default function ProjectStatusPage({ params }) {
               <div className="preview-frame">
                 <video src={job.video_url} controls style={{ width: '100%', height: '100%' }} />
               </div>
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', gap: 10, justifyContent: 'center' }}>
                 <a className="primary-btn" href={job.video_url} download>
                   mp4 다운로드
                 </a>
+                {captions.length > 0 && (
+                  <button type="button" className="primary-btn" onClick={() => setEditorOpen((v) => !v)}>
+                    {editorOpen ? '상세편집 닫기' : '상세편집'}
+                  </button>
+                )}
               </div>
             </div>
           ) : job.status !== 'failed' ? (
@@ -137,6 +206,88 @@ export default function ProjectStatusPage({ params }) {
               제작 중입니다... (자동으로 2초마다 상태를 갱신해요)
             </p>
           ) : null}
+        </div>
+      )}
+
+      {editorOpen && captions.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <p style={{ fontSize: 13, color: '#9c9cb5', marginBottom: 16 }}>
+            자막이 나오는 구간(장면)마다 다른 사진/영상이나 자막 스타일을 지정할 수 있어요. 비워두면 프로젝트 전체 기본값을 그대로 씁니다.
+            음성은 다시 만들지 않아서 크레딧이 들지 않아요.
+          </p>
+          {captions.map((c, i) => {
+            const scene = getScene(i);
+            return (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'center',
+                  padding: '12px 0',
+                  borderBottom: i < captions.length - 1 ? '1px solid #1c1c2b' : 'none',
+                }}
+              >
+                <div
+                  style={{
+                    width: 54,
+                    height: 96,
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    background: '#000',
+                    flexShrink: 0,
+                    border: '1px solid #2a2a3c',
+                  }}
+                >
+                  {scene.videoUrl ? (
+                    <video src={scene.videoUrl} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : scene.imageUrl ? (
+                    <img src={scene.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : null}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.text}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label style={{ fontSize: 12, color: '#9c9cb5', cursor: 'pointer' }}>
+                      {sceneUploading === i ? '업로드 중...' : '이미지/영상 바꾸기'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"
+                        onChange={(e) => handleSceneImageUpload(i, e)}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                    <select
+                      value={scene.captionPresetId || ''}
+                      onChange={(e) => updateScene(i, { captionPresetId: e.target.value || undefined })}
+                      style={{ fontSize: 12, padding: '4px 8px' }}
+                    >
+                      <option value="">기본 자막 스타일</option>
+                      {CAPTION_PRESET_LIST.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                    {(scene.imageUrl || scene.videoUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => updateScene(i, { imageUrl: undefined, videoUrl: undefined })}
+                        style={{ fontSize: 12, color: '#fda4af', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        초기화
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <button type="button" className="primary-btn" onClick={handleSaveScenes} disabled={savingScenes} style={{ marginTop: 16 }}>
+            {savingScenes ? '저장하고 재렌더링 요청 중...' : '저장하고 다시 렌더링'}
+          </button>
         </div>
       )}
 

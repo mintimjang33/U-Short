@@ -24,6 +24,15 @@ create table if not exists projects (
   caption_style jsonb not null default '{}'::jsonb,
   background jsonb not null default '{}'::jsonb,
   extra_info jsonb not null default '[]'::jsonb,
+  -- 상세편집: 자막 청크(장면) 인덱스별 { imageUrl, videoUrl, captionPresetId } 오버라이드 배열.
+  -- 없는 인덱스는 위 background/content_template_id를 그대로 쓴다.
+  scenes jsonb not null default '[]'::jsonb,
+  -- 렌더링 때 실제로 쓰인 자막 청크 배열({text,startMs,endMs}[]). 상세편집 화면에서
+  -- "이 자막 청크에 이 이미지를 쓰겠다"를 고를 때 목록으로 보여주려고 완료 후에도 남겨둔다.
+  captions jsonb not null default '[]'::jsonb,
+  -- 상세편집에서 장면(scenes)만 바꿔 재렌더링할 때 음성을 다시 만들지 않고 재사용하려고 저장한다.
+  audio_url text,
+  duration_ms integer,
 
   options jsonb not null default '{}'::jsonb,
   -- options 예시: { "planningMode": "auto", "variantCount": 1, "lengthMode": "shortform",
@@ -44,6 +53,11 @@ create table if not exists jobs (
   stage text
     check (stage in ('extract', 'script', 'voice', 'captions', 'render', 'done')),
   error_message text,
+
+  -- 'full': extract→script→voice→captions→render 전체 파이프라인(기본).
+  -- 'scene_update': 상세편집에서 장면(scenes)만 바꿨을 때, 이미 만들어둔 음성/자막을 재사용해
+  -- render 단계만 다시 돈다(TTS를 다시 부르지 않아 빠르고 크레딧도 안 씀).
+  kind text not null default 'full' check (kind in ('full', 'scene_update')),
 
   credits_used int not null default 0,
   video_url text, -- 완료 시 Supabase Storage 공개 URL

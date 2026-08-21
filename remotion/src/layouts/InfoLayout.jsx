@@ -1,7 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
-import { useCurrentCaption, useNowMs } from '../useCurrentCaption.js';
+import { useCurrentCaption, useCurrentSceneIndex, useNowMs } from '../useCurrentCaption.js';
 
 const INTRO_MS = 2000;
 
@@ -14,11 +14,19 @@ export const InfoLayout = ({
   backgroundColor = '#0a0a0a',
   audioSrc,
   extraInfo = [],
+  scenes = [],
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const nowMs = useNowMs();
   const currentCaption = useCurrentCaption(captions);
+  // 상세편집(장면별 미디어/자막 스타일)에서 자막 청크별로 지정한 값이 있으면 그걸 우선 쓰고,
+  // 없으면 프로젝트 전체 배경/자막 프리셋으로 자연스럽게 폴백한다.
+  const sceneIndex = useCurrentSceneIndex(captions);
+  const activeScene = scenes[sceneIndex] || null;
+  const effectiveImageUrl = activeScene?.imageUrl || backgroundImageUrl;
+  const effectiveVideoUrl = activeScene?.videoUrl || backgroundVideoUrl;
+  const effectiveCaptionPresetId = activeScene?.captionPresetId || captionPresetId;
 
   const zoom = interpolate(frame, [0, fps * 20], [1, 1.12], { extrapolateRight: 'clamp' });
   const introOpacity = interpolate(nowMs, [0, 300, INTRO_MS - 400, INTRO_MS], [0, 1, 1, 0], {
@@ -32,15 +40,15 @@ export const InfoLayout = ({
 
       {/* 상단: 이미지/영상 영역 (62%) */}
       <AbsoluteFill style={{ height: '62%', overflow: 'hidden', backgroundColor }}>
-        {backgroundVideoUrl ? (
+        {effectiveVideoUrl ? (
           <Video
-            src={backgroundVideoUrl}
+            src={effectiveVideoUrl}
             muted
             style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})` }}
           />
-        ) : backgroundImageUrl ? (
+        ) : effectiveImageUrl ? (
           <Img
-            src={backgroundImageUrl}
+            src={effectiveImageUrl}
             style={{
               width: '100%',
               height: '100%',
@@ -105,7 +113,7 @@ export const InfoLayout = ({
           padding: '0 40px',
         }}
       >
-        <CaptionText text={currentCaption?.text} presetId={captionPresetId} />
+        <CaptionText text={currentCaption?.text} presetId={effectiveCaptionPresetId} />
       </AbsoluteFill>
     </AbsoluteFill>
   );

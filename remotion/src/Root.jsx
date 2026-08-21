@@ -24,6 +24,9 @@ export const defaultCompositionProps = {
   audioSrc: null,
   durationMs: 5000,
   extraInfo: [],
+  // 상세편집: 자막 청크(장면) 인덱스별 { imageUrl, videoUrl, captionPresetId } 오버라이드.
+  // 없는 인덱스는 프로젝트 전체 배경/자막 프리셋을 그대로 쓴다.
+  scenes: [],
   introEnabled: false,
   introTemplateId: DEFAULT_INTRO_PRESET_ID,
   introDisplayOnly: true,

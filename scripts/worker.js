@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const { getSupabaseServerClient } = await import('../lib/supabase.js');
-const { runPipeline } = await import('../lib/pipeline.js');
+const { runPipeline, runSceneUpdateRender } = await import('../lib/pipeline.js');
 
 const POLL_INTERVAL_MS = 5000;
 let running = true;
@@ -29,7 +29,7 @@ process.on('SIGINT', () => {
 async function pickNextQueuedJob(supabase) {
   const { data, error } = await supabase
     .from('jobs')
-    .select('id, project_id')
+    .select('id, project_id, kind')
     .eq('status', 'queued')
     .order('created_at', { ascending: true })
     .limit(1)
@@ -48,9 +48,13 @@ async function main() {
   while (running) {
     const job = await pickNextQueuedJob(supabase);
     if (job) {
-      console.log(`[worker] job 처리 시작: ${job.id} (project ${job.project_id})`);
+      console.log(`[worker] job 처리 시작: ${job.id} (project ${job.project_id}, kind=${job.kind || 'full'})`);
       try {
-        await runPipeline({ projectId: job.project_id, jobId: job.id });
+        if (job.kind === 'scene_update') {
+          await runSceneUpdateRender({ projectId: job.project_id, jobId: job.id });
+        } else {
+          await runPipeline({ projectId: job.project_id, jobId: job.id });
+        }
         console.log(`[worker] job 완료: ${job.id}`);
       } catch (err) {
         console.error(`[worker] job 처리 중 예외: ${job.id}`, err);

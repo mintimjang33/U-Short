@@ -18,6 +18,28 @@ export const GET = withApiErrorHandling(async (_request, { params }) => {
   return NextResponse.json(data);
 });
 
+// 상세편집: 장면(scenes)을 저장하고, 음성/대본은 그대로 재사용하는 경량 재렌더 job을 큐에 넣는다.
+export const PATCH = withApiErrorHandling(async (request, { params }) => {
+  const { id } = params;
+  const body = await request.json().catch(() => null);
+  if (!body || !Array.isArray(body.scenes)) {
+    return NextResponse.json({ error: 'scenes 배열이 필요합니다.' }, { status: 400 });
+  }
+
+  const supabase = getSupabaseServerClient();
+  const { error: updateError } = await supabase.from('projects').update({ scenes: body.scenes }).eq('id', id);
+  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+  const { data: job, error: jobError } = await supabase
+    .from('jobs')
+    .insert({ project_id: id, status: 'queued', kind: 'scene_update' })
+    .select()
+    .single();
+  if (jobError) return NextResponse.json({ error: `재렌더 job 생성 실패: ${jobError.message}` }, { status: 500 });
+
+  return NextResponse.json({ jobId: job.id }, { status: 202 });
+});
+
 export const DELETE = withApiErrorHandling(async (_request, { params }) => {
   const { id } = params;
   const supabase = getSupabaseServerClient();

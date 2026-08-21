@@ -1,7 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
-import { useCurrentCaption, useNowMs } from '../useCurrentCaption.js';
+import { useCurrentCaption, useCurrentSceneIndex, useNowMs } from '../useCurrentCaption.js';
 
 const INTRO_MS = 1800;
 
@@ -14,11 +14,17 @@ export const CardLayout = ({
   backgroundColor = '#111318',
   audioSrc,
   extraInfo = [],
+  scenes = [],
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const nowMs = useNowMs();
   const currentCaption = useCurrentCaption(captions);
+  const sceneIndex = useCurrentSceneIndex(captions);
+  const activeScene = scenes[sceneIndex] || null;
+  const effectiveImageUrl = activeScene?.imageUrl || backgroundImageUrl;
+  const effectiveVideoUrl = activeScene?.videoUrl || backgroundVideoUrl;
+  const effectiveCaptionPresetId = activeScene?.captionPresetId || captionPresetId;
 
   const zoom = interpolate(frame, [0, fps * 20], [1.04, 1.16], { extrapolateRight: 'clamp' });
   const introOpacity = interpolate(nowMs, [0, 300, INTRO_MS - 300, INTRO_MS], [0, 1, 1, 0], {
@@ -42,15 +48,15 @@ export const CardLayout = ({
             boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
           }}
         >
-          {backgroundVideoUrl ? (
+          {effectiveVideoUrl ? (
             <Video
-              src={backgroundVideoUrl}
+              src={effectiveVideoUrl}
               muted
               style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})` }}
             />
-          ) : backgroundImageUrl ? (
+          ) : effectiveImageUrl ? (
             <Img
-              src={backgroundImageUrl}
+              src={effectiveImageUrl}
               style={{
                 width: '100%',
                 height: '100%',
@@ -100,7 +106,7 @@ export const CardLayout = ({
               padding: '0 40px 80px',
             }}
           >
-            <CaptionText text={currentCaption?.text} presetId={captionPresetId} />
+            <CaptionText text={currentCaption?.text} presetId={effectiveCaptionPresetId} />
           </AbsoluteFill>
 
           {extraInfo.map((info, i) => (
