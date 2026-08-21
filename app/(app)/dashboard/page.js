@@ -1,14 +1,8 @@
 import { getSupabaseServerClient } from '../../../lib/supabase.js';
 import { getCurrentUser } from '../../../lib/supabaseServerAuth.js';
+import DashboardClient from './DashboardClient.jsx';
 
 export const dynamic = 'force-dynamic';
-
-const STATUS_LABEL = {
-  queued: '대기중',
-  processing: '제작중',
-  completed: '완료',
-  failed: '실패',
-};
 
 async function loadProjects() {
   const user = await getCurrentUser();
@@ -23,19 +17,28 @@ async function loadProjects() {
 
   if (error) throw new Error(`프로젝트 목록을 불러오지 못했습니다: ${error.message}`);
 
-  return (data || []).map((project) => {
+  const projects = (data || []).map((project) => {
     const jobs = [...(project.jobs || [])].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
     return { ...project, latestJob: jobs[0] || null };
   });
+
+  let folders = [];
+  if (user) {
+    const { data: folderData } = await supabase.from('folders').select('*').eq('user_id', user.id).order('created_at');
+    folders = folderData || [];
+  }
+
+  return { projects, folders };
 }
 
 export default async function DashboardPage() {
   let projects = [];
+  let folders = [];
   let loadError = null;
   try {
-    projects = await loadProjects();
+    ({ projects, folders } = await loadProjects());
   } catch (err) {
     loadError = err.message;
   }
@@ -76,39 +79,7 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {!loadError && projects.length === 0 && (
-        <div className="card" style={{ textAlign: 'center', padding: 60 }}>
-          <p style={{ marginBottom: 16, color: '#9c9cb5' }}>아직 프로젝트가 없어요.</p>
-          <a className="primary-btn" href="/new">
-            + 첫 프로젝트 만들기
-          </a>
-        </div>
-      )}
-
-      {!loadError && projects.length > 0 && (
-        <div className="project-grid">
-          {projects.map((project) => {
-            const status = project.latestJob?.status || 'queued';
-            return (
-              <a key={project.id} className="project-card" href={`/projects/${project.id}`}>
-                <div className="project-thumb">
-                  {project.latestJob?.video_url ? (
-                    <video src={project.latestJob.video_url} muted />
-                  ) : (
-                    <span>{STATUS_LABEL[status]}</span>
-                  )}
-                </div>
-                <div className="project-meta">
-                  <div className="title">
-                    {project.title_line1 || project.source_url || '제목 없음'}
-                  </div>
-                  <span className={`badge ${status}`}>{STATUS_LABEL[status] || status}</span>
-                </div>
-              </a>
-            );
-          })}
-        </div>
-      )}
+      {!loadError && <DashboardClient projects={projects} folders={folders} />}
     </div>
   );
 }

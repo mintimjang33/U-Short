@@ -32,9 +32,9 @@ export default async function AppLayout({ children }) {
           <a href="/dev/api-mcp">API / MCP</a>
         </nav>
         <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid #2a2a3c' }}>
-          <div style={{ fontSize: 12, color: '#9c9cb5', marginBottom: 8, wordBreak: 'break-all' }}>
-            {user?.email}
-          </div>
+          <a href="/account" style={{ fontSize: 12, color: '#9c9cb5', marginBottom: 8, wordBreak: 'break-all', display: 'block' }}>
+            {user?.email} (내 정보)
+          </a>
           <SignOutButton />
           <div style={{ marginTop: 10 }}>
             <a href="/policy/terms" style={{ fontSize: 11, color: '#6b6b85', marginRight: 10 }}>

@@ -18,15 +18,24 @@ export const GET = withApiErrorHandling(async (_request, { params }) => {
   return NextResponse.json(data);
 });
 
-// 상세편집: 장면(scenes)을 저장하고, 음성/대본은 그대로 재사용하는 경량 재렌더 job을 큐에 넣는다.
+// 폴더 이동처럼 재렌더가 필요 없는 단순 메타데이터 수정과, 상세편집(scenes 저장 + 재렌더 job)을 둘 다 처리한다.
 export const PATCH = withApiErrorHandling(async (request, { params }) => {
   const { id } = params;
   const body = await request.json().catch(() => null);
-  if (!body || !Array.isArray(body.scenes)) {
+  if (!body) return NextResponse.json({ error: '요청 본문이 필요합니다.' }, { status: 400 });
+
+  const supabase = getSupabaseServerClient();
+
+  if (body.folderId !== undefined && !Array.isArray(body.scenes)) {
+    const { error } = await supabase.from('projects').update({ folder_id: body.folderId }).eq('id', id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (!Array.isArray(body.scenes)) {
     return NextResponse.json({ error: 'scenes 배열이 필요합니다.' }, { status: 400 });
   }
 
-  const supabase = getSupabaseServerClient();
   const { error: updateError } = await supabase.from('projects').update({ scenes: body.scenes }).eq('id', id);
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
