@@ -4,7 +4,18 @@ import { getSupabaseServerClient } from '../../../lib/supabase.js';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
 
 const BUCKET = 'shorts';
-const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+const ALLOWED_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'audio/webm', // "내 목소리 녹음" 기능이 MediaRecorder로 만드는 파일 형식
+  'audio/mpeg',
+  'audio/mp4',
+];
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB
 
@@ -19,7 +30,8 @@ export const POST = withApiErrorHandling(async (request) => {
     return NextResponse.json({ error: `지원하지 않는 파일 형식입니다: ${file.type}` }, { status: 400 });
   }
   const isVideo = file.type.startsWith('video/');
-  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  const isAudio = file.type.startsWith('audio/');
+  const maxBytes = isVideo || isAudio ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
   if (file.size > maxBytes) {
     return NextResponse.json(
       { error: `파일이 너무 큽니다 (최대 ${Math.round(maxBytes / 1024 / 1024)}MB).` },

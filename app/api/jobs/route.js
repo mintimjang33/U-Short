@@ -31,6 +31,7 @@ export const POST = withApiErrorHandling(async (request) => {
     scriptProvider: body.scriptProvider || defaults.script_provider || 'claude',
     voiceProvider: body.voiceProvider || defaults.voice_provider || 'fal',
     voice: body.voice || defaults.voice_id || null,
+    recordedAudioUrl: body.voiceProvider === 'recorded' ? body.recordedAudioUrl || null : null,
     introEnabled: body.introEnabled ?? defaults.intro_enabled ?? false,
     introTemplateId: body.introTemplateId || defaults.intro_template_id || null,
     introDisplayOnly: body.introDisplayOnly ?? true,

@@ -52,6 +52,47 @@ export default function NewProjectPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [logoIsVideo, setLogoIsVideo] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // 내 목소리 녹음
+  const [recording, setRecording] = useState(false);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState('');
+  const [uploadingRecording, setUploadingRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+
+  async function startRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    recordedChunksRef.current = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+    };
+    recorder.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+      setUploadingRecording(true);
+      try {
+        const form = new FormData();
+        form.append('file', new File([blob], 'recording.webm', { type: 'audio/webm' }));
+        const res = await fetch('/api/upload', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || '녹음 업로드 실패');
+        setRecordedAudioUrl(data.url);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setUploadingRecording(false);
+      }
+    };
+    mediaRecorderRef.current = recorder;
+    recorder.start();
+    setRecording(true);
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  }
   const [introEnabled, setIntroEnabled] = useState(false);
   const [introTemplateId, setIntroTemplateId] = useState(INTRO_TEMPLATE_LIST[0].id);
   const [uploading, setUploading] = useState(false);
@@ -270,6 +311,7 @@ export default function NewProjectPage() {
           scriptProvider,
           voiceProvider,
           voice: voiceId || null,
+          recordedAudioUrl: voiceProvider === 'recorded' ? recordedAudioUrl || null : null,
           introEnabled,
           introTemplateId,
           preGeneratedScript: { titleLine1: scriptTitleLine1, titleLine2: scriptTitleLine2, narration: scriptNarration },
@@ -580,6 +622,30 @@ export default function NewProjectPage() {
                 </Pill>
               ))}
             </div>
+          </div>
+        )}
+
+        {voiceProvider === 'recorded' && (
+          <div className="field">
+            <label>내 목소리 녹음</label>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {!recording ? (
+                <button type="button" className="pill" onClick={startRecording} disabled={uploadingRecording}>
+                  🎙️ 녹음 시작
+                </button>
+              ) : (
+                <button type="button" className="pill selected" onClick={stopRecording}>
+                  ⏹️ 녹음 종료
+                </button>
+              )}
+              {uploadingRecording && <span className="field-hint">업로드 중...</span>}
+            </div>
+            {recordedAudioUrl && (
+              <div style={{ marginTop: 10 }}>
+                <audio src={recordedAudioUrl} controls style={{ width: '100%' }} />
+                <div className="field-hint">이 녹음이 TTS 대신 그대로 쓰여요.</div>
+              </div>
+            )}
           </div>
         )}
 
