@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
+import { ExtraInfoOverlay } from '../ExtraInfoOverlay.jsx';
 import { useCurrentCaption, useCurrentSceneIndex, useNowMs } from '../useCurrentCaption.js';
 
 const INTRO_MS = 2000;
@@ -11,6 +12,7 @@ export const FullFocusedLayout = ({
   title = {},
   captions = [],
   captionPresetId,
+  captionAnimationId,
   backgroundImageUrl,
   backgroundVideoUrl,
   backgroundColor = '#0a0a0a',
@@ -27,6 +29,7 @@ export const FullFocusedLayout = ({
   const effectiveImageUrl = activeScene?.imageUrl || backgroundImageUrl;
   const effectiveVideoUrl = activeScene?.videoUrl || backgroundVideoUrl;
   const effectiveCaptionPresetId = activeScene?.captionPresetId || captionPresetId;
+  const effectiveCaptionAnimationId = activeScene?.captionAnimationId || captionAnimationId;
 
   const zoom = interpolate(frame, [0, fps * 20], [1, 1.1], { extrapolateRight: 'clamp' });
   const introOpacity = interpolate(nowMs, [0, 300, INTRO_MS - 400, INTRO_MS], [0, 1, 1, 0], {
@@ -73,26 +76,10 @@ export const FullFocusedLayout = ({
       )}
 
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'flex-end', padding: '0 40px 90px' }}>
-        <CaptionText text={currentCaption?.text} presetId={effectiveCaptionPresetId} />
+        <CaptionText text={currentCaption?.text} presetId={effectiveCaptionPresetId} animationId={effectiveCaptionAnimationId} startMs={currentCaption?.startMs} />
       </AbsoluteFill>
 
-      {extraInfo.map((info, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            left: info.x ?? 24,
-            top: info.y ?? 24,
-            fontFamily: 'Pretendard, sans-serif',
-            fontWeight: 600,
-            fontSize: 28,
-            color: '#ffffff',
-            textShadow: '0 2px 6px rgba(0,0,0,0.6)',
-          }}
-        >
-          {info.text}
-        </div>
-      ))}
+      <ExtraInfoOverlay extraInfo={extraInfo} fontSize={28} />
     </AbsoluteFill>
   );
 };

@@ -9,6 +9,7 @@ import {
   LENGTH_MODES,
   LAYOUTS,
   CAPTION_PRESET_LIST,
+  CAPTION_ANIMATION_LIST,
   SCRIPT_PROVIDERS,
   VOICE_PROVIDERS,
   VOICE_PRESET_LIST,
@@ -40,6 +41,7 @@ export default function NewProjectPage() {
   const [lengthMode, setLengthMode] = useState('shortform');
   const [layoutId, setLayoutId] = useState(initialLayoutId);
   const [captionPresetId, setCaptionPresetId] = useState(initialCaptionPresetId);
+  const [captionAnimationId, setCaptionAnimationId] = useState('none');
   const [scriptProvider, setScriptProvider] = useState('claude');
   const [voiceProvider, setVoiceProvider] = useState('fal');
   const [voiceId, setVoiceId] = useState('');
@@ -47,6 +49,9 @@ export default function NewProjectPage() {
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
   const [backgroundVideoUrl, setBackgroundVideoUrl] = useState('');
   const [extraInfoText, setExtraInfoText] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoIsVideo, setLogoIsVideo] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [introEnabled, setIntroEnabled] = useState(false);
   const [introTemplateId, setIntroTemplateId] = useState(INTRO_TEMPLATE_LIST[0].id);
   const [uploading, setUploading] = useState(false);
@@ -261,6 +266,7 @@ export default function NewProjectPage() {
           lengthMode,
           layoutId,
           captionPresetId,
+          captionAnimationId,
           scriptProvider,
           voiceProvider,
           voice: voiceId || null,
@@ -272,7 +278,10 @@ export default function NewProjectPage() {
             imageUrl: selectedStock ? null : backgroundImageUrl || extractedImages[0] || null,
             videoUrl: selectedStock ? selectedStock.videoUrl : backgroundVideoUrl || null,
           },
-          extraInfo: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
+          extraInfo: [
+            ...(extraInfoText ? [{ type: 'text', text: extraInfoText, x: 24, y: 24 }] : []),
+            ...(logoUrl ? [{ type: logoIsVideo ? 'video' : 'image', url: logoUrl, x: 24, y: 100, width: logoIsVideo ? 160 : 90 }] : []),
+          ],
           planningMode: 'direct',
         }),
       });
@@ -479,11 +488,57 @@ export default function NewProjectPage() {
         </div>
 
         <div className="field">
+          <label>로고/영상 오버레이 (선택 — 이미지는 워터마크, 영상은 짧은 클립을 화면 위에 얹어요)</label>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,video/mp4,video/webm"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUploadingLogo(true);
+              try {
+                const form = new FormData();
+                form.append('file', file);
+                const res = await fetch('/api/upload', { method: 'POST', body: form });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '업로드 실패');
+                setLogoUrl(data.url);
+                setLogoIsVideo(file.type.startsWith('video/'));
+              } catch (err) {
+                setError(err.message);
+              } finally {
+                setUploadingLogo(false);
+              }
+            }}
+          />
+          {uploadingLogo && <div className="field-hint">업로드 중...</div>}
+          {logoUrl && (
+            <div className="field-hint">
+              업로드됨: <a href={logoUrl} target="_blank" rel="noreferrer">미리보기</a>{' '}
+              <button type="button" onClick={() => setLogoUrl('')} style={{ marginLeft: 8 }}>
+                제거
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="field">
           <label>자막 프리셋</label>
           <select value={captionPresetId} onChange={(e) => setCaptionPresetId(e.target.value)}>
             {CAPTION_PRESET_LIST.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>자막 애니메이션</label>
+          <select value={captionAnimationId} onChange={(e) => setCaptionAnimationId(e.target.value)}>
+            {CAPTION_ANIMATION_LIST.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.label}
               </option>
             ))}
           </select>

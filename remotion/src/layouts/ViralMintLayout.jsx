@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
+import { ExtraInfoOverlay } from '../ExtraInfoOverlay.jsx';
 import { useCurrentCaption } from '../useCurrentCaption.js';
 
 // 바이럴민트: 실제 인물이 말하는 영상을 배경으로 쓰는 레이아웃.
@@ -75,23 +76,7 @@ export const ViralMintLayout = ({
         <CaptionText text={currentCaption?.text} presetId={captionPresetId} />
       </AbsoluteFill>
 
-      {extraInfo.map((info, i) => (
-        <div
-          key={i}
-          style={{
-            position: 'absolute',
-            left: info.x ?? 24,
-            top: info.y ?? 24,
-            fontFamily: 'Pretendard, sans-serif',
-            fontWeight: 600,
-            fontSize: 26,
-            color: '#ffffff',
-            textShadow: '0 2px 6px rgba(0,0,0,0.6)',
-          }}
-        >
-          {info.text}
-        </div>
-      ))}
+      <ExtraInfoOverlay extraInfo={extraInfo} fontSize={26} />
     </AbsoluteFill>
   );
 };
