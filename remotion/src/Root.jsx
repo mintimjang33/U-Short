@@ -7,6 +7,7 @@ import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
 import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
 import { DEFAULT_CAPTION_ANIMATION_ID } from './captionAnimations.js';
+import { DEFAULT_TITLE_PRESET_ID } from './titlePresets.js';
 import { DEFAULT_INTRO_PRESET_ID } from './introPresets.js';
 import { withIntro, INTRO_DURATION_MS } from './withIntro.jsx';
 
@@ -20,6 +21,7 @@ export const defaultCompositionProps = {
   captions: [],
   captionPresetId: DEFAULT_CAPTION_PRESET_ID,
   captionAnimationId: DEFAULT_CAPTION_ANIMATION_ID,
+  titlePresetId: DEFAULT_TITLE_PRESET_ID,
   backgroundImageUrl: null,
   backgroundVideoUrl: null,
   backgroundColor: '#0a0a0a',

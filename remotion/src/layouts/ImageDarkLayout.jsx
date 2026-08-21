@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
 import { ExtraInfoOverlay } from '../ExtraInfoOverlay.jsx';
+import { TitleBlock } from '../TitleBlock.jsx';
 import { useCurrentCaption, useCurrentSceneIndex, useNowMs } from '../useCurrentCaption.js';
 
 const INTRO_MS = 2000;
@@ -13,6 +14,7 @@ export const ImageDarkLayout = ({
   captions = [],
   captionPresetId,
   captionAnimationId,
+  titlePresetId,
   backgroundImageUrl,
   backgroundVideoUrl,
   backgroundColor = '#0a0a0a',
@@ -58,18 +60,7 @@ export const ImageDarkLayout = ({
 
         {(title.line1 || title.line2) && (
           <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: introOpacity, padding: '0 60px' }}>
-            <div style={{ textAlign: 'center' }}>
-              {title.line1 && (
-                <div style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 64, color: '#fff', lineHeight: 1.25 }}>
-                  {title.line1}
-                </div>
-              )}
-              {title.line2 && (
-                <div style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 64, color: '#fff', lineHeight: 1.25 }}>
-                  {title.line2}
-                </div>
-              )}
-            </div>
+            <TitleBlock line1={title.line1} line2={title.line2} presetId={titlePresetId} fontSize={64} />
           </AbsoluteFill>
         )}
 

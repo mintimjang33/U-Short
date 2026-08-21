@@ -10,6 +10,7 @@ import {
   LAYOUTS,
   CAPTION_PRESET_LIST,
   CAPTION_ANIMATION_LIST,
+  TITLE_PRESET_LIST,
   SCRIPT_PROVIDERS,
   VOICE_PROVIDERS,
   VOICE_PRESET_LIST,
@@ -42,6 +43,7 @@ export default function NewProjectPage() {
   const [layoutId, setLayoutId] = useState(initialLayoutId);
   const [captionPresetId, setCaptionPresetId] = useState(initialCaptionPresetId);
   const [captionAnimationId, setCaptionAnimationId] = useState('none');
+  const [titlePresetId, setTitlePresetId] = useState(TITLE_PRESET_LIST[0].id);
   const [scriptProvider, setScriptProvider] = useState('claude');
   const [voiceProvider, setVoiceProvider] = useState('fal');
   const [voiceId, setVoiceId] = useState('');
@@ -308,6 +310,7 @@ export default function NewProjectPage() {
           layoutId,
           captionPresetId,
           captionAnimationId,
+          titlePresetId,
           scriptProvider,
           voiceProvider,
           voice: voiceId || null,
@@ -457,6 +460,17 @@ export default function NewProjectPage() {
             {LAYOUTS.map((l) => (
               <Pill key={l.id} selected={layoutId === l.id} onClick={() => setLayoutId(l.id)}>
                 {l.label}
+              </Pill>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
+          <label>제목 스타일 (발견하기 템플릿의 색상/강조 조합)</label>
+          <div className="pill-group">
+            {TITLE_PRESET_LIST.map((t) => (
+              <Pill key={t.id} selected={titlePresetId === t.id} onClick={() => setTitlePresetId(t.id)}>
+                {t.label}
               </Pill>
             ))}
           </div>

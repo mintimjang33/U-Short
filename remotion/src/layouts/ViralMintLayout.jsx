@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
 import { ExtraInfoOverlay } from '../ExtraInfoOverlay.jsx';
+import { TitleBlock } from '../TitleBlock.jsx';
 import { useCurrentCaption } from '../useCurrentCaption.js';
 
 // 바이럴민트: 실제 인물이 말하는 영상을 배경으로 쓰는 레이아웃.
@@ -12,6 +13,7 @@ export const ViralMintLayout = ({
   title = {},
   captions = [],
   captionPresetId,
+  titlePresetId,
   backgroundVideoUrl,
   backgroundImageUrl,
   backgroundColor = '#0a0a0a',
@@ -58,16 +60,7 @@ export const ViralMintLayout = ({
               background: 'rgba(0,0,0,0.45)',
             }}
           >
-            {title.line1 && (
-              <div style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 40, color: '#fff', lineHeight: 1.3 }}>
-                {title.line1}
-              </div>
-            )}
-            {title.line2 && (
-              <div style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 40, color: '#fff', lineHeight: 1.3 }}>
-                {title.line2}
-              </div>
-            )}
+            <TitleBlock line1={title.line1} line2={title.line2} presetId={titlePresetId} fontSize={40} />
           </div>
         </AbsoluteFill>
       )}

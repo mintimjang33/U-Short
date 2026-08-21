@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Audio, Img, Video, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
 import { CaptionText } from '../CaptionText.jsx';
 import { ExtraInfoOverlay } from '../ExtraInfoOverlay.jsx';
+import { TitleBlock } from '../TitleBlock.jsx';
 import { useCurrentCaption, useCurrentSceneIndex, useNowMs } from '../useCurrentCaption.js';
 
 const INTRO_MS = 2000;
@@ -11,6 +12,7 @@ export const InfoLayout = ({
   captions = [],
   captionPresetId,
   captionAnimationId,
+  titlePresetId,
   backgroundImageUrl,
   backgroundVideoUrl,
   backgroundColor = '#0a0a0a',
@@ -71,18 +73,7 @@ export const InfoLayout = ({
               background: 'linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.35))',
             }}
           >
-            <div style={{ textAlign: 'center' }}>
-              {title.line1 && (
-                <div style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 64, color: '#fff', lineHeight: 1.25 }}>
-                  {title.line1}
-                </div>
-              )}
-              {title.line2 && (
-                <div style={{ fontFamily: 'Pretendard, sans-serif', fontWeight: 800, fontSize: 64, color: '#fff', lineHeight: 1.25 }}>
-                  {title.line2}
-                </div>
-              )}
-            </div>
+            <TitleBlock line1={title.line1} line2={title.line2} presetId={titlePresetId} fontSize={64} />
           </AbsoluteFill>
         )}
 
