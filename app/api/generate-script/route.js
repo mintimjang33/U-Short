@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
 import { loadRemoteConfig } from '../../../lib/remoteConfig.js';
 import { extractBlogContent } from '../../../lib/extract.js';
+import { extractProductInfo } from '../../../lib/extractProduct.js';
 import { generateScript } from '../../../lib/generateScript.js';
 import { researchTopic } from '../../../lib/researchTopic.js';
 
@@ -15,7 +16,17 @@ export const POST = withApiErrorHandling(async (request) => {
   let text = sourceText || null;
   let images = [];
   let sources = [];
-  if (sourceUrl) {
+  let product = null;
+  if (sourceUrl && style === 'shopping') {
+    // 쇼핑 구매유도형: 일반 블로그 파서 대신 상품 페이지 전용 추출(상품명/가격/JSON-LD Product)을 쓴다.
+    product = await extractProductInfo(sourceUrl);
+    text =
+      text ||
+      [`상품명: ${product.name}`, product.price ? `가격: ${product.price}` : null, `상품 URL: ${sourceUrl}`]
+        .filter(Boolean)
+        .join('\n');
+    if (product.image) images = [product.image];
+  } else if (sourceUrl) {
     const extracted = await extractBlogContent(sourceUrl);
     text = text || extracted.text;
     images = extracted.images;
@@ -37,5 +48,5 @@ export const POST = withApiErrorHandling(async (request) => {
     provider: scriptProvider,
   });
 
-  return NextResponse.json({ ...script, images, sources, sourceText: text });
+  return NextResponse.json({ ...script, images, sources, sourceText: text, product });
 });

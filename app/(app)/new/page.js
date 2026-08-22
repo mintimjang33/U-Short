@@ -114,6 +114,7 @@ export default function NewProjectPage() {
   const [scriptTitleLine2, setScriptTitleLine2] = useState('');
   const [scriptNarration, setScriptNarration] = useState('');
   const [extractedImages, setExtractedImages] = useState([]);
+  const [productInfo, setProductInfo] = useState(null);
   const [searchingStock, setSearchingStock] = useState(false);
   const [stockKeywords, setStockKeywords] = useState([]);
   const [stockVideos, setStockVideos] = useState([]);
@@ -280,6 +281,7 @@ export default function NewProjectPage() {
       setScriptTitleLine2(data.titleLine2 || '');
       setScriptNarration(data.narration);
       setExtractedImages(data.images || []);
+      setProductInfo(data.product || null);
       setStep(2);
       searchStockVideos(data.titleLine1, data.titleLine2, data.narration);
     } catch (err) {
@@ -370,11 +372,14 @@ export default function NewProjectPage() {
             <label>URL</label>
             <input
               type="url"
-              placeholder="https://blog.naver.com/..."
+              placeholder={style === 'shopping' ? 'https://www.coupang.com/vp/products/...' : 'https://blog.naver.com/...'}
               value={sourceUrl}
               onChange={(e) => setSourceUrl(e.target.value)}
               required={sourceMode === 'link'}
             />
+            {style === 'shopping' && (
+              <div className="field-hint">쇼핑몰 상품 상세페이지 URL을 넣으면 상품명·가격·이미지를 자동으로 추출해서 구매유도 대본을 만들어요.</div>
+            )}
           </div>
         )}
 
@@ -680,6 +685,19 @@ export default function NewProjectPage() {
           >
             ← 설정으로 돌아가기
           </button>
+
+          {productInfo && (
+            <div className="field" style={{ display: 'flex', gap: 12, alignItems: 'center', background: 'rgba(167,139,250,0.08)', padding: 12, borderRadius: 10 }}>
+              {productInfo.image && (
+                <img src={productInfo.image} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+              )}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700 }}>🛍️ {productInfo.name}</div>
+                {productInfo.price && <div style={{ fontSize: 13, fontWeight: 800, color: '#a78bfa' }}>{productInfo.price}</div>}
+                <div className="field-hint">상품명·가격 추출 완료</div>
+              </div>
+            </div>
+          )}
 
           <div className="field">
             <label>제목 (수정 가능)</label>
