@@ -63,7 +63,7 @@ async function getOwnerDefaults() {
 }
 
 const BUCKET = 'shorts';
-const TABLES = ['projects', 'jobs', 'templates'];
+const TABLES = ['projects', 'jobs', 'templates', 'app_config'];
 const TABLE_SCHEMA = {
   projects: {
     columns:
@@ -78,6 +78,13 @@ const TABLE_SCHEMA = {
   templates: {
     columns: 'id, user_id, name, layout_id, config(jsonb), created_at',
     note: '템플릿 에디터에서 저장한 내 템플릿(제목/자막/배경 스타일 프리셋).',
+  },
+  app_config: {
+    columns: 'key, value, updated_at',
+    note:
+      'SCRIPT_PROVIDER/ANTHROPIC_API_KEY/GEMINI_API_KEY/OPENAI_API_KEY/TTS_PROVIDER/FAL_KEY/ELEVENLABS_API_KEY/ELEVENLABS_VOICE_ID/NAVER_CLOVA_CLIENT_ID/NAVER_CLOVA_CLIENT_SECRET 등 ' +
+      'lib/remoteConfig.js가 파이프라인 시작 시 자동으로 불러오는 전역 키·설정값. key 컬럼이 .env.local.example의 환경변수 이름과 1:1 대응. ' +
+      'upsert_row로 { table:"app_config", row:{ key:"...", value:"..." } } 형태로 추가/수정. Vercel 환경변수와 달리 재배포 없이 즉시 반영되고, 로컬 워커(scripts/worker.js)와 Vercel 배포본 둘 다 이 테이블을 통해 값을 읽는다 — Vercel 프로젝트 설정에만 넣으면 로컬 워커는 못 읽으니 주의.',
   },
 };
 
