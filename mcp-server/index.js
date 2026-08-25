@@ -120,7 +120,7 @@ server.registerTool(
       sourceUrl: z.string().optional().describe('블로그 글 URL (네이버블로그/티스토리 등)'),
       sourceText: z.string().optional().describe('URL 대신 직접 줄 대본/원본 텍스트'),
       planningMode: z.enum(['auto', 'direct']).optional().describe('direct면 sourceText를 그대로 쓰고 제목만 생성, 생략시 sourceText만 있으면 자동으로 direct'),
-      style: z.enum(['summary', 'hook', 'list']).optional().describe('기본 summary'),
+      style: z.enum(['summary', 'hook', 'list', 'twist-reveal']).optional().describe('기본 summary. twist-reveal은 "신비한 건축사전"류 반전 지식형 — videoMode:ai-generated와 궁합이 좋음'),
       outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional().describe('기본 original(원문유지)'),
       lengthMode: z.enum(['shortform', 'longform']).optional().describe('기본 shortform'),
       layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional().describe('기본 info'),
@@ -132,8 +132,14 @@ server.registerTool(
         .optional()
         .describe('음성 페르소나(voiceProvider가 fal일 때만 적용). 생략시 기본 보이스. list_options의 voicePresets로 이름/설명 확인 가능'),
       backgroundColor: z.string().optional().describe('기본 #0a0a0a'),
-      backgroundImageUrl: z.string().optional().describe('비우면 대표 이미지를 자동으로 씀'),
+      backgroundImageUrl: z.string().optional().describe('비우면 대표 이미지를 자동으로 씀 (videoMode:ai-generated면 무시됨)'),
       backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL (upload_asset으로 먼저 업로드)'),
+      videoMode: z.enum(['static', 'ai-generated']).optional().describe(
+        '기본 static(정적 이미지/영상). ai-generated면 내레이션을 장면 단위로 쪼개서 AI가 각 장면 영상을 자동 생성한다 ' +
+        '(list_options의 videoModes/videoProviders 참고). layoutId를 지정 안 하면 이 모드에선 full-focused를 기본으로 쓴다. ' +
+        '⚠️ 클립마다 실비용이 든다(기본 wan 기준 8초당 약 $0.4) — 짧은 영상도 클립 2~3개가 필요하니 미리 감안할 것.'
+      ),
+      videoProvider: z.enum(['wan', 'kling', 'seedance', 'veo']).optional().describe('videoMode가 ai-generated일 때만 적용. 기본 wan(가성비 1순위), veo가 가장 고품질·고가. list_options의 videoProviders로 상세 비교 확인'),
       extraInfoText: z.string().optional().describe('좌상단에 계속 뜨는 워터마크 텍스트 (예: 채널명)'),
       introEnabled: z.boolean().optional().describe('기본 false. true면 본문 전에 1.8초 제목 전용 인트로보드를 붙임'),
       introTemplateId: z.string().optional().describe('list_options로 전체 10종 확인 가능, 기본 cool-living-room-intro'),
@@ -157,6 +163,8 @@ server.registerTool(
         backgroundColor,
         backgroundImageUrl,
         backgroundVideoUrl,
+        videoMode,
+        videoProvider,
         extraInfoText,
         introEnabled,
         introTemplateId,
@@ -180,6 +188,8 @@ server.registerTool(
         introEnabled: introEnabled ?? defaults.intro_enabled ?? false,
         introTemplateId: introTemplateId || defaults.intro_template_id || null,
         introDisplayOnly: true,
+        videoMode: videoMode || 'static',
+        videoProvider: videoProvider || 'wan',
       };
 
       const { data: project, error: projectError } = await supabase
@@ -187,7 +197,9 @@ server.registerTool(
         .insert({
           source_url: sourceUrl || null,
           source_text: sourceText || null,
-          layout_id: layoutId || defaults.layout_id || 'info',
+          // AI 영상 생성 모드는 배경을 scenes[]로 채우므로, 별도 layoutId를 안 줬으면
+          // 화면을 꽉 채우는 full-focused가 정적 모드의 'info'보다 잘 맞는다.
+          layout_id: layoutId || defaults.layout_id || (videoMode === 'ai-generated' ? 'full-focused' : 'info'),
           content_template_id: captionPresetId || defaults.caption_preset_id || DEFAULT_CAPTION_PRESET_ID,
           background: {
             color: backgroundColor || '#0a0a0a',
@@ -369,6 +381,8 @@ server.registerTool(
       scriptStyles: OPTIONS.SCRIPT_STYLES,
       outputLanguages: OPTIONS.OUTPUT_LANGUAGES,
       lengthModes: OPTIONS.LENGTH_MODES,
+      videoModes: OPTIONS.VIDEO_MODES,
+      videoProviders: OPTIONS.VIDEO_PROVIDERS,
     })
 );
 
