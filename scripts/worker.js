@@ -17,6 +17,10 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const { getSupabaseServerClient } = await import('../lib/supabase.js');
 const { runPipeline, runSceneUpdateRender } = await import('../lib/pipeline.js');
+// U-OneShot 컷대리(별도 Next.js 앱, 같은 Supabase 프로젝트 공유)용 — uos_cutdaeri_projects는
+// 이 워커의 jobs/projects 테이블과 무관한 독립 테이블이라 큐잉 방식만 폴링에 추가하고,
+// 기존 jobs 처리 로직(pickNextQueuedJob 등)은 전혀 건드리지 않는다.
+const { runCutDaeriRender } = await import('../lib/cutDaeriPipeline.js');
 
 const POLL_INTERVAL_MS = 5000;
 let running = true;
@@ -41,9 +45,24 @@ async function pickNextQueuedJob(supabase) {
   return data;
 }
 
+async function pickNextCutDaeriProject(supabase) {
+  const { data, error } = await supabase
+    .from('uos_cutdaeri_projects')
+    .select('id, topic')
+    .eq('status', 'rendering')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('[worker] 컷대리 프로젝트 조회 실패:', error.message);
+    return null;
+  }
+  return data;
+}
+
 async function main() {
   const supabase = getSupabaseServerClient();
-  console.log('[worker] 시작됨. 5초마다 queued job을 확인합니다. (Ctrl+C로 종료)');
+  console.log('[worker] 시작됨. 5초마다 queued job / 컷대리 렌더링 대기열을 확인합니다. (Ctrl+C로 종료)');
 
   while (running) {
     const job = await pickNextQueuedJob(supabase);
@@ -59,9 +78,22 @@ async function main() {
       } catch (err) {
         console.error(`[worker] job 처리 중 예외: ${job.id}`, err);
       }
-    } else {
-      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      continue;
     }
+
+    const cutDaeriProject = await pickNextCutDaeriProject(supabase);
+    if (cutDaeriProject) {
+      console.log(`[worker] 컷대리 렌더링 시작: ${cutDaeriProject.topic} (${cutDaeriProject.id})`);
+      try {
+        const { videoUrl } = await runCutDaeriRender({ projectId: cutDaeriProject.id });
+        console.log(`[worker] 컷대리 렌더링 완료: ${videoUrl}`);
+      } catch (err) {
+        console.error(`[worker] 컷대리 렌더링 중 예외: ${cutDaeriProject.id}`, err);
+      }
+      continue;
+    }
+
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
   console.log('[worker] 종료됨.');
 }

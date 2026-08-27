@@ -5,6 +5,7 @@ import { CardLayout } from './layouts/CardLayout.jsx';
 import { FullFocusedLayout } from './layouts/FullFocusedLayout.jsx';
 import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
 import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
+import { CutDaeriLayout } from './layouts/CutDaeriLayout.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
 import { DEFAULT_CAPTION_ANIMATION_ID } from './captionAnimations.js';
 import { DEFAULT_TITLE_PRESET_ID } from './titlePresets.js';
@@ -50,6 +51,7 @@ const LAYOUTS = [
   ['FullFocusedLayout', FullFocusedLayout],
   ['ImageDarkLayout', ImageDarkLayout],
   ['ViralMintLayout', ViralMintLayout],
+  ['CutDaeriLayout', CutDaeriLayout],
 ];
 
 export const RemotionRoot = () => {
@@ -68,6 +70,18 @@ export const RemotionRoot = () => {
           calculateMetadata={calculateMetadata}
         />
       ))}
+      {/* U-OneShot 컷대리는 16:9도 지원해야 해서, 기존 LAYOUTS 루프(전부 1080x1920 고정)와
+          별개로 가로 버전 하나만 추가로 등록한다. 다른 레이아웃엔 영향 없음. */}
+      <Composition
+        id="CutDaeriLayoutHorizontal"
+        component={withIntro(CutDaeriLayout)}
+        width={1920}
+        height={1080}
+        fps={FPS}
+        durationInFrames={FALLBACK_DURATION_FRAMES}
+        defaultProps={defaultCompositionProps}
+        calculateMetadata={calculateMetadata}
+      />
     </>
   );
 };
