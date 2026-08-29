@@ -35,6 +35,7 @@ const OPTIONS = await import('../lib/options.js');
 const { DEFAULT_CAPTION_PRESET_ID } = await import('../remotion/src/captionPresets.js');
 const { searchNaverNews } = await import('../lib/naverNews.js');
 const { analyzeScriptStyle } = await import('../lib/analyzeScriptStyle.js');
+const { generateImage } = await import('../lib/generateImage.js');
 
 let supabase;
 try {
@@ -439,6 +440,102 @@ server.registerTool(
 );
 
 server.registerTool(
+  'create_image_style_set',
+  {
+    description:
+      '캐릭터/화풍 일관성을 위한 레퍼런스 이미지 세트를 저장한다(Qventor의 "레퍼런스 이미지 세트"와 같은 개념). ' +
+      '이미지는 미리 upload_asset으로 올려서 URL을 받아둘 것(최대 2장). generate_image의 styleSetId로 재사용 가능.',
+    inputSchema: {
+      name: z.string().describe('세트 이름 (예: "내 캐릭터")'),
+      referenceImageUrls: z.array(z.string()).min(1).max(2).describe('레퍼런스 이미지 URL 1~2장 (upload_asset으로 먼저 업로드)'),
+      artStyleId: z
+        .enum(OPTIONS.ART_STYLE_PRESETS.map((p) => p.id))
+        .optional()
+        .describe('그림체 프리셋(list_options의 artStylePresets 참고). 지정하면 generate_image 프롬프트에 자동으로 화풍 지시문이 붙는다'),
+    },
+  },
+  async ({ name, referenceImageUrls, artStyleId }) => {
+    try {
+      const { data, error } = await supabase
+        .from('image_style_sets')
+        .insert({ name, reference_image_urls: referenceImageUrls, art_style_id: artStyleId || null })
+        .select()
+        .single();
+      if (error) throw new Error(`저장 실패: ${error.message}`);
+      return textResult(data);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'list_image_style_sets',
+  { description: 'create_image_style_set으로 저장해둔 레퍼런스 이미지 세트 목록을 보여준다.', inputSchema: {} },
+  async () => {
+    try {
+      const { data, error } = await supabase.from('image_style_sets').select('*').order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return textResult(data);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'generate_image',
+  {
+    description:
+      '프롬프트로 정적 이미지를 생성한다(fal.ai Nano Banana/Gemini 2.5 Flash Image). ' +
+      'styleSetId를 주면 그 레퍼런스 이미지를 편집/재구성하는 방식으로 캐릭터·구도 일관성을 유지하고, ' +
+      '화풍 프리셋도 자동으로 프롬프트에 반영된다. 인스타툰처럼 같은 캐릭터로 여러 장 만들 때 매번 같은 styleSetId를 쓸 것.',
+    inputSchema: {
+      prompt: z.string().describe('이미지 프롬프트(영어 권장)'),
+      styleSetId: z.string().optional().describe('list_image_style_sets로 확인 가능. 지정하면 레퍼런스 이미지+화풍이 자동 적용됨'),
+      artStyleId: z
+        .enum(OPTIONS.ART_STYLE_PRESETS.map((p) => p.id))
+        .optional()
+        .describe('styleSetId 없이 화풍만 지정하고 싶을 때(레퍼런스 이미지 없이 텍스트→이미지)'),
+      aspectRatio: z.enum(['auto', '1:1', '9:16', '16:9', '3:4', '4:3']).optional().describe('기본 9:16(쇼츠 세로)'),
+    },
+  },
+  async ({ prompt, styleSetId, artStyleId, aspectRatio }) => {
+    try {
+      let referenceImageUrls = [];
+      let fullPrompt = prompt;
+
+      if (styleSetId) {
+        const { data: set, error } = await supabase.from('image_style_sets').select('*').eq('id', styleSetId).maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!set) throw new Error(`styleSetId를 찾을 수 없습니다: ${styleSetId}`);
+        referenceImageUrls = set.reference_image_urls || [];
+        const preset = OPTIONS.ART_STYLE_PRESETS.find((p) => p.id === set.art_style_id);
+        if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
+      } else if (artStyleId) {
+        const preset = OPTIONS.ART_STYLE_PRESETS.find((p) => p.id === artStyleId);
+        if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
+      }
+
+      const { imageUrl } = await generateImage({ prompt: fullPrompt, referenceImageUrls, aspectRatio: aspectRatio || '9:16' });
+
+      // fal 임시 URL은 만료될 수 있으므로 우리 Storage로 옮겨서 영구 URL을 돌려준다.
+      const imgRes = await fetch(imageUrl);
+      if (!imgRes.ok) throw new Error(`생성된 이미지 다운로드 실패 (${imgRes.status})`);
+      const buffer = Buffer.from(await imgRes.arrayBuffer());
+      const storagePath = `generated-images/${crypto.randomUUID()}.png`;
+      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, buffer, { contentType: 'image/png' });
+      if (uploadError) throw new Error(`Storage 업로드 실패: ${uploadError.message}`);
+      const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
+
+      return textResult({ url: pub.publicUrl });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
   'list_options',
   {
     description: 'create_shorts/upsert_row에 쓸 수 있는 유효한 값 목록(레이아웃, 자막 프리셋, provider, 스타일, 언어 등)을 보여준다.',
@@ -447,6 +544,7 @@ server.registerTool(
   async () =>
     textResult({
       layouts: OPTIONS.LAYOUTS,
+      artStylePresets: OPTIONS.ART_STYLE_PRESETS,
       captionPresets: OPTIONS.CAPTION_PRESET_LIST,
       introTemplates: OPTIONS.INTRO_TEMPLATE_LIST,
       scriptProviders: OPTIONS.SCRIPT_PROVIDERS,

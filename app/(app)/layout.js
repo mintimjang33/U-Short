@@ -18,6 +18,7 @@ export default async function AppLayout({ children }) {
           <a href="/dashboard">내 프로젝트</a>
           <a href="/templates">템플릿</a>
           <a href="/templates/gallery">템플릿 갤러리</a>
+          <a href="/image-styles">캐릭터/화풍 스타일</a>
           <a href="/settings">자동화 기본값</a>
           {isOwner && <a href="/admin">관리자</a>}
         </nav>
