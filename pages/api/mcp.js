@@ -74,6 +74,7 @@ function buildServer() {
         style: z.enum(['summary', 'hook', 'list']).optional(),
         outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional(),
         lengthMode: z.enum(['shortform', 'longform', 'extended']).optional(),
+        targetChars: z.number().int().min(30).optional().describe('대본 목표 글자수 자유 입력(30자 이상). 지정하면 lengthMode 대신 이 값 기준으로 분량을 맞춘다'),
         layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional(),
         captionPresetId: z.string().optional(),
         scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional(),
@@ -82,6 +83,7 @@ function buildServer() {
           .enum(['seoa', 'hajun', 'taeo', 'ina', 'doyun', 'jihoon', 'yuna', 'minjae', 'luna', 'harin', 'seojun', 'daon', 'mio', 'haru', 'ren', 'oliver', 'noah', 'emma', 'liam', 'ava', 'chloe', 'adam', 'jay'])
           .optional()
           .describe('음성 페르소나(voiceProvider가 fal일 때만 적용). list_options의 voicePresets로 확인 가능'),
+        voiceSpeed: z.number().min(0.7).max(1.2).optional().describe('재생 속도, 0.7(느림)~1.2(빠름), 기본 1.0'),
         backgroundColor: z.string().optional(),
         backgroundImageUrl: z.string().optional(),
         backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL'),
@@ -101,9 +103,11 @@ function buildServer() {
           style: args.style || defaults.style || 'summary',
           outputLanguage: args.outputLanguage || defaults.output_language || 'original',
           lengthMode: args.lengthMode || defaults.length_mode || 'shortform',
+          targetChars: args.targetChars || null,
           scriptProvider: args.scriptProvider || defaults.script_provider || 'claude',
           voiceProvider: args.voiceProvider || defaults.voice_provider || 'fal',
           voice: args.voice || defaults.voice_id || null,
+          voiceSpeed: args.voiceSpeed || null,
           introEnabled: args.introEnabled ?? defaults.intro_enabled ?? false,
           introTemplateId: args.introTemplateId || defaults.intro_template_id || null,
           introDisplayOnly: true,

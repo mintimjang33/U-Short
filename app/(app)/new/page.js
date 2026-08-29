@@ -40,6 +40,7 @@ export default function NewProjectPage() {
   const [style, setStyle] = useState('summary');
   const [outputLanguage, setOutputLanguage] = useState('original');
   const [lengthMode, setLengthMode] = useState('shortform');
+  const [targetChars, setTargetChars] = useState('');
   const [layoutId, setLayoutId] = useState(initialLayoutId);
   const [captionPresetId, setCaptionPresetId] = useState(initialCaptionPresetId);
   const [captionAnimationId, setCaptionAnimationId] = useState('none');
@@ -47,6 +48,7 @@ export default function NewProjectPage() {
   const [scriptProvider, setScriptProvider] = useState('claude');
   const [voiceProvider, setVoiceProvider] = useState('fal');
   const [voiceId, setVoiceId] = useState('');
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0);
   const [backgroundColor, setBackgroundColor] = useState('#0a0a0a');
   const [backgroundImageUrl, setBackgroundImageUrl] = useState('');
   const [backgroundVideoUrl, setBackgroundVideoUrl] = useState('');
@@ -270,6 +272,7 @@ export default function NewProjectPage() {
           style,
           outputLanguage,
           lengthMode,
+          targetChars: targetChars ? Number(targetChars) : null,
           scriptProvider,
           planningMode: sourceMode === 'manual' ? 'direct' : 'auto',
         }),
@@ -316,6 +319,7 @@ export default function NewProjectPage() {
           scriptProvider,
           voiceProvider,
           voice: voiceId || null,
+          voiceSpeed: voiceSpeed !== 1.0 ? voiceSpeed : null,
           recordedAudioUrl: voiceProvider === 'recorded' ? recordedAudioUrl || null : null,
           introEnabled,
           introTemplateId,
@@ -437,11 +441,19 @@ export default function NewProjectPage() {
           <label>영상 길이</label>
           <div className="pill-group">
             {LENGTH_MODES.map((l) => (
-              <Pill key={l.id} selected={lengthMode === l.id} onClick={() => setLengthMode(l.id)}>
+              <Pill key={l.id} selected={lengthMode === l.id && !targetChars} onClick={() => { setLengthMode(l.id); setTargetChars(''); }}>
                 {l.label}
               </Pill>
             ))}
           </div>
+          <input
+            type="number"
+            min={30}
+            placeholder="목표 글자수 직접 입력(선택, 예: 250) — 입력하면 위 프리셋 대신 이 값으로 분량을 맞춥니다"
+            value={targetChars}
+            onChange={(e) => setTargetChars(e.target.value)}
+            style={{ marginTop: 8, width: '100%' }}
+          />
         </div>
 
         {savedTemplates.length > 0 && (
@@ -629,6 +641,21 @@ export default function NewProjectPage() {
             연습할 땐 ElevenLabs(무료 티어), 실전은 fal.ai, 대량 운영으로 넘어가면 CLOVA를 고려하세요.
           </div>
         </div>
+
+        {voiceProvider !== 'recorded' && (
+          <div className="field">
+            <label>재생 속도: {voiceSpeed.toFixed(2)}x</label>
+            <input
+              type="range"
+              min={0.7}
+              max={1.2}
+              step={0.05}
+              value={voiceSpeed}
+              onChange={(e) => setVoiceSpeed(Number(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </div>
+        )}
 
         {voiceProvider === 'fal' && (
           <div className="field">

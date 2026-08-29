@@ -11,7 +11,7 @@ import { researchTopic } from '../../../lib/researchTopic.js';
 export const POST = withApiErrorHandling(async (request) => {
   await loadRemoteConfig();
   const body = await request.json();
-  const { sourceUrl, sourceText, topic, style, outputLanguage, lengthMode, scriptProvider, planningMode } = body;
+  const { sourceUrl, sourceText, topic, style, outputLanguage, lengthMode, targetChars, scriptProvider, planningMode } = body;
 
   let text = sourceText || null;
   let images = [];
@@ -45,6 +45,7 @@ export const POST = withApiErrorHandling(async (request) => {
     style: style || 'summary',
     outputLanguage: outputLanguage || 'original',
     lengthMode: lengthMode || 'shortform',
+    targetChars: targetChars || undefined,
     provider: scriptProvider,
   });
 
