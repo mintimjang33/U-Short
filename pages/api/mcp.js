@@ -13,6 +13,7 @@ import * as OPTIONS from '../../lib/options.js';
 import { searchNaverNews } from '../../lib/naverNews.js';
 import { analyzeScriptStyle } from '../../lib/analyzeScriptStyle.js';
 import { generateImage } from '../../lib/generateImage.js';
+import { loadRemoteConfig } from '../../lib/remoteConfig.js';
 import crypto from 'node:crypto';
 
 const GITHUB_REPO = 'mintimjang33/U-Short';
@@ -532,6 +533,7 @@ export default async function handler(req, res) {
     return;
   }
 
+  await loadRemoteConfig();
   const server = buildServer();
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   res.on('close', () => {

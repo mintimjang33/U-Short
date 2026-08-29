@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '../../../lib/supabase.js';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
 import { getCurrentUser } from '../../../lib/supabaseServerAuth.js';
 import { analyzeScriptStyle } from '../../../lib/analyzeScriptStyle.js';
+import { loadRemoteConfig } from '../../../lib/remoteConfig.js';
 
 // 저장된 커스텀 대본 스타일(레퍼런스 대본 학습) 목록 조회.
 export const GET = withApiErrorHandling(async () => {
@@ -18,6 +19,7 @@ export const GET = withApiErrorHandling(async () => {
 
 // 레퍼런스 대본을 분석해서 새 커스텀 스타일로 저장 (Qventor의 "대본 스타일 관리"와 같은 개념).
 export const POST = withApiErrorHandling(async (request) => {
+  await loadRemoteConfig();
   const body = await request.json().catch(() => null);
   if (!body || !body.name || !body.referenceText) {
     return NextResponse.json({ error: 'name, referenceText는 필수입니다.' }, { status: 400 });

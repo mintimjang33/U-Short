@@ -4,10 +4,12 @@ import { getSupabaseServerClient } from '../../../lib/supabase.js';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
 import { generateImage } from '../../../lib/generateImage.js';
 import { ART_STYLE_PRESETS } from '../../../lib/options.js';
+import { loadRemoteConfig } from '../../../lib/remoteConfig.js';
 
 const BUCKET = 'shorts';
 
 export const POST = withApiErrorHandling(async (request) => {
+  await loadRemoteConfig();
   const body = await request.json().catch(() => null);
   if (!body || !body.prompt) {
     return NextResponse.json({ error: 'prompt는 필수입니다.' }, { status: 400 });
