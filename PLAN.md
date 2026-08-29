@@ -253,6 +253,71 @@ Vercel 서버리스 함수는 실행시간 제한 때문에 Remotion 렌더링�
 
 **사용자 철학 재확인(2026-08-21)**: "똑같은 클론 상황에서 내가 직접 사용해봐야 뭐가 불편한지 안다" — 그러니 애매하면 스스로 판단해서 빼지 말고 최대한 이식하고, 실제 사용해보면서 필요한 것만 추릴 것. 이번엔 예외적으로 결제/사용량/제휴만 명시적으로 보류시킴(계좌정보 등 실제 금전이 오가는 민감 영역이라).
 
+## Qventor 비교로 발견한 격차 보완 (2026-08-29~30)
+
+파인더(유파인더) 작업 중 경쟁 프로그램 "Qventor"와 기능을 대조해서 나온 격차 목록(④~⑩ + 5개
+프로젝트 타입)을 유쇼츠에도 적용하는 작업. 유쇼츠는 브랜드명도 "슈퍼쇼츠"였다가 이미 2026-08-20에
+"UShort"(한글 표기 "유쇼츠")로 바뀐 상태였음 — 이 문서 상단 "슈퍼쇼츠" 표기는 과거 기록.
+
+### 시작 전 발견한 사고: 로컬 폴더 통째 소실 + 다른 프로젝트 파일 오염
+- 로컬 `Downloads/슈퍼쇼츠` 폴더가 통째로 사라져 있어서(바탕화면 "UShort 워커 시작" 바로가기로 발견)
+  GitHub(`mintimjang33/U-Short`)에서 새로 클론해 `Downloads/유쇼츠`로 복구. `.mcp.json`/`launch.json`의
+  경로도 새 폴더명으로 수정.
+- 2026-08-28 사용자 계정으로 GitHub 웹 업로드("Add files via upload", 커밋 dcc98f8)를 통해 **완전히
+  다른 프로젝트(Threads/유튜브쇼츠 콘텐츠 생성 도구로 보임 - benchmarks/personas/sites/mcp-connectors 등)
+  파일 33개가 잘못 섞여 들어와 있었음**. `app/globals.css`(다크테마 커스텀 스타일)는 345→26줄로
+  덮어써져 있었고, `pages/api/mcp.js` vs `app/api/mcp/route.ts` 등 라우트 충돌로 `next build` 자체가
+  깨져 있었음. 각 파일이 원본을 덮어쓴 건지(M) 신규 추가인지(A) git status로 확인 후 32개 삭제 +
+  globals.css 복원으로 해결(커밋 0a8bcf9). PowerShell `Remove-Item`이 `[id]`/`[slug]`/`[token]` 같은
+  대괄호 경로를 와일드카드로 오인하는 버그를 겪어서 `-LiteralPath`로 우회함 — 앞으로 대괄호 포함
+  경로를 스크립트로 다룰 땐 주의할 것.
+
+### ⑦ TTS 재생속도 + ⑨ 대본 목표 글자수 자유입력 (커밋 adeda95)
+- speed 0.7~1.2(1.0 기본), fal/ElevenLabs/CLOVA 세 provider 전부 실제 API 문서로 지원 확인 후 구현
+  (CLOVA는 네이티브 -5~5 범위로 정규화 변환).
+- targetChars(자유 입력)가 있으면 lengthMode(3단계 프리셋) 대신 그 값 기준으로 대본 분량을 맞춤.
+- `/new` 페이지 UI, create_shorts MCP 도구(로컬+원격) 둘 다 반영. 부수적으로 로컬 MCP의 lengthMode enum이
+  'extended'를 누락하고 있던 버그도 발견해서 같이 수정.
+
+### ④ 레퍼런스 대본 학습→저장 (커밋 3a3b577, 실사용 검증 완료)
+- 레퍼런스 대본을 붙여넣으면 AI(Claude)가 말투/톤/구조를 분석해서 이름 붙여 저장, 이후
+  scriptStyleId로 재사용. `lib/analyzeScriptStyle.js` 신규, `generateScript.js`에
+  customStyleDescription 파라미터 추가(STYLE_GUIDE 프리셋보다 우선).
+- 새 테이블 `script_styles` 필요 — DDL 실행 권한이 없어서(로컬 .env.local 소실, 원격 MCP의 run_sql도
+  SELECT 전용) SQL 마이그레이션 파일을 만들어 사용자가 Supabase SQL Editor에서 직접 실행하는 방식으로
+  진행(`supabase/migration_script_styles.sql`, 실행 후 삭제해도 됨 — schema.sql과 같은 컨벤션).
+- **실제 라이브 MCP(`https://u-short-beige.vercel.app/api/mcp`)에 save_script_style을 직접 호출해서
+  검증함** — 레퍼런스 대본("안녕하세요 여러분! 오늘은...")을 넣었더니 "존댓말 기반 친근한 구어체",
+  "훅 형성 패턴", "문장 리듬" 등을 정확히 분석해서 저장하는 것까지 확인.
+
+### ⑤⑥ 그림체 스타일 프리셋 + 캐릭터 일관성 레퍼런스 이미지 세트 (커밋 1e5c3a6+d1b5761, 실사용 검증 완료)
+이번 대화 전체의 원래 동기(인스타툰류 자동화 - 캐릭터 고정 후 여러 장 반복 생성)의 핵심 인프라.
+- `lib/generateImage.js` 신규 — fal.ai **Nano Banana(Gemini 2.5 Flash Image)** 사용. 실제 fal API
+  문서로 두 엔드포인트 다 확인: 레퍼런스 이미지 있으면 `fal-ai/nano-banana/edit`(image_urls 파라미터,
+  최대 2장, image-to-image로 캐릭터·구도 일관성 유지), 없으면 `fal-ai/nano-banana`(순수 텍스트→이미지).
+- `ART_STYLE_PRESETS` 6종(2D일러스트/연필그림/수채화/한국형웹툰/손그림/수묵화) `lib/options.js`에 추가.
+- 새 테이블 `image_style_sets`(이름+화풍+레퍼런스 이미지 URL 최대 2장) — script_styles와 동일하게
+  마이그레이션 파일로 전달(`supabase/migration_image_style_sets.sql`).
+- 새 페이지 `/image-styles`(사이드바 "캐릭터/화풍 스타일") — 세트 관리 + 테스트 생성 UI.
+- MCP 도구(로컬+원격) `create_image_style_set`/`list_image_style_sets`/`generate_image` 신규.
+- **버그 발견·수정**: FAL_KEY가 Vercel 환경변수엔 없고(원래 로컬 워커만 FAL을 썼음) `app_config`
+  테이블(`loadRemoteConfig()`) 경유로만 쓸 수 있는데, 새 라우트/원격 MCP 핸들러가 `loadRemoteConfig()`를
+  호출 안 해서 처음엔 "FAL_KEY 환경변수가 필요합니다" 에러가 났음 — 호출 추가로 해결(커밋 d1b5761).
+  FAL_KEY 자체도 app_config에 없어서 사용자가 SQL로 직접 등록함.
+- **실제 캐릭터 일관성 육안 검증 완료**: 여우 캐릭터를 텍스트로 먼저 생성 → 그 이미지를 레퍼런스로
+  등록 → "같은 캐릭터가 책상에서 책 읽는 장면"으로 재생성 → **두 이미지의 얼굴형·색상 패턴·흰색
+  귀/꼬리 무늬·화풍이 전부 동일하게 유지되는 것을 실제 이미지 픽셀로 확인함**(fal.run 실제 API 호출,
+  Supabase Storage 실제 업로드까지 end-to-end). 이걸로 인스타툰류 프로젝트 타입 구현의 기반이 마련됨.
+
+### 남은 순서 (사용자가 확정한 우선순위)
+5. 인스타툰 (⑤⑥ 위에 구축 — 다음 차례)
+6. ⑩ 파이프라인 단계별 분리 실행
+7. 숏폼/롱폼 편집(내 영상 업로드)
+8. AI 인플루언서
+9. 쇼핑/해외쇼츠 짜집기
+10. 카드뉴스
+11. ⑧ 외부 이미지생성(Google Flow류) 연동 — 가장 큰 아키텍처 변경이라 마지막
+
 ## 하지 않기로 한 것 (스코프 아웃, 이유 있음)
 
 - 회원가입/로그인/결제 UI, 스톡영상 자동 매칭, QR 폰사진 전송 — 전부 조사는 했으나 이번 개인용 MVP 범위 밖 (단, 로그인/약관/관리자는 2026-08-20에 결국 구현함 — 위 섹션 참고. 이 줄은 과거 기록이라 남겨두되 최신 상태는 아님)
