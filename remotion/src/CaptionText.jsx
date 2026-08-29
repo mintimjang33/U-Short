@@ -30,9 +30,11 @@ function useAnimationStyle(animationId, startMs) {
   return {};
 }
 
-export function CaptionText({ text, presetId, animationId, startMs }) {
+export function CaptionText({ text, presetId, animationId, startMs, override }) {
   if (!text) return null;
-  const preset = getCaptionPreset(presetId);
+  // override: U-OneShot 컷대리 4단계(자막 스타일 커스텀)에서 프리셋 8종 대신 색상/폰트크기/외곽선/
+  // 배경을 직접 지정할 때 쓰는 부분 오버라이드. 없으면 프리셋을 그대로 쓴다.
+  const preset = { ...getCaptionPreset(presetId), ...(override || {}) };
   const animation = getCaptionAnimation(animationId);
   const animStyle = useAnimationStyle(animationId, startMs);
   const isFire = animation === getCaptionAnimation('fire') && animationId === 'fire';

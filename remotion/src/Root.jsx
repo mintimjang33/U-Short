@@ -21,6 +21,8 @@ export const defaultCompositionProps = {
   title: { line1: '제목 첫번째줄', line2: '제목 두번째 줄' },
   captions: [],
   captionPresetId: DEFAULT_CAPTION_PRESET_ID,
+  captionPosition: 'bottom',
+  captionOverride: null,
   captionAnimationId: DEFAULT_CAPTION_ANIMATION_ID,
   titlePresetId: DEFAULT_TITLE_PRESET_ID,
   backgroundImageUrl: null,
