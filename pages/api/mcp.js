@@ -204,6 +204,58 @@ function buildServer() {
   );
 
   server.registerTool(
+    'create_video_edit',
+    {
+      title: '숏폼/롱폼 편집 요청 (큐에 등록)',
+      description:
+        '사용자가 직접 찍은 영상을 그대로 쓰면서 그 영상의 실제 음성을 Whisper로 받아써서 자막만 입힌다(TTS 안 씀). ' +
+        'job을 큐에 넣기만 하고 바로 반환 — 실제 처리는 PC 워커가 담당.',
+      inputSchema: {
+        videoUrl: z.string().describe('편집할 영상 URL'),
+        outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional(),
+        captionPresetId: z.string().optional(),
+        titlePresetId: z.string().optional(),
+        extraInfoText: z.string().optional(),
+        introEnabled: z.boolean().optional(),
+        introTemplateId: z.string().optional(),
+      },
+    },
+    async (args) => {
+      try {
+        const { data: project, error: projectError } = await supabase
+          .from('projects')
+          .insert({
+            layout_id: 'video-edit',
+            content_template_id: args.captionPresetId || 'existing-preset-bold-white-outline',
+            background: { color: '#0a0a0a', videoUrl: args.videoUrl, imageUrl: null },
+            extra_info: args.extraInfoText ? [{ text: args.extraInfoText, x: 24, y: 24 }] : [],
+            options: {
+              outputLanguage: args.outputLanguage || 'original',
+              titlePresetId: args.titlePresetId || null,
+              introEnabled: args.introEnabled ?? false,
+              introTemplateId: args.introTemplateId || null,
+              introDisplayOnly: true,
+            },
+          })
+          .select()
+          .single();
+        if (projectError) throw new Error(`프로젝트 생성 실패: ${projectError.message}`);
+
+        const { data: job, error: jobError } = await supabase
+          .from('jobs')
+          .insert({ project_id: project.id, status: 'queued', kind: 'video_edit' })
+          .select()
+          .single();
+        if (jobError) throw new Error(`job 생성 실패: ${jobError.message}`);
+
+        return textResult({ projectId: project.id, jobId: job.id, status: 'queued', note: 'PC의 워커(npm run worker)가 켜져 있어야 처리됩니다. get_job_status(jobId)로 확인.' });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
     'regenerate_voice',
     {
       title: '음성만 재생성 (큐에 등록)',

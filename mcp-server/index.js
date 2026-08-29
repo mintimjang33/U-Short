@@ -30,7 +30,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 // 프로젝트 루트의 lib/*를 그대로 재사용한다 (중복 구현 안 함) — dotenv.config()가 먼저 실행돼서
 // 이 모듈들이 process.env를 읽을 때 이미 .env.local 값이 채워져 있다.
 const { getSupabaseServerClient } = await import('../lib/supabase.js');
-const { runPipeline, runVoiceUpdateRender } = await import('../lib/pipeline.js');
+const { runPipeline, runVoiceUpdateRender, runVideoEditPipeline } = await import('../lib/pipeline.js');
 const { extractBlogContent } = await import('../lib/extract.js');
 const { generateScript } = await import('../lib/generateScript.js');
 const OPTIONS = await import('../lib/options.js');
@@ -310,6 +310,76 @@ server.registerTool(
       const finalJob = await fetchJobWithProject(newJob.id);
       return textResult({
         newJobId: newJob.id,
+        status: finalJob.status,
+        videoUrl: finalJob.video_url,
+        errorMessage: finalJob.error_message,
+      });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'create_video_edit',
+  {
+    description:
+      '숏폼/롱폼 편집: AI가 대본/음성을 새로 만들지 않고, 사용자가 직접 찍은 영상을 그대로 쓰면서 ' +
+      '그 영상의 실제 음성을 Whisper로 받아써서 자막만 입힌다(TTS 안 씀, 영상 자체의 소리가 그대로 나옴). ' +
+      'videoUrl은 upload_asset으로 먼저 업로드해서 얻을 것. wait=true(기본)면 완료까지 기다렸다가 영상 URL을 바로 돌려준다.',
+    inputSchema: {
+      videoUrl: z.string().describe('편집할 영상 URL (upload_asset으로 먼저 업로드)'),
+      outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional().describe('기본 original — 자막 언어를 강제하고 싶으면 지정(원본 음성과 다른 언어면 번역 자막이 됨)'),
+      captionPresetId: z.string().optional().describe('기본 existing-preset-bold-white-outline'),
+      titlePresetId: z.string().optional(),
+      extraInfoText: z.string().optional(),
+      introEnabled: z.boolean().optional(),
+      introTemplateId: z.string().optional(),
+      wait: z.boolean().optional().describe('기본 true'),
+    },
+  },
+  async (args) => {
+    try {
+      const { videoUrl, outputLanguage, captionPresetId, titlePresetId, extraInfoText, introEnabled, introTemplateId, wait } = args;
+
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          layout_id: 'video-edit',
+          content_template_id: captionPresetId || DEFAULT_CAPTION_PRESET_ID,
+          background: { color: '#0a0a0a', videoUrl, imageUrl: null },
+          extra_info: extraInfoText ? [{ text: extraInfoText, x: 24, y: 24 }] : [],
+          options: {
+            outputLanguage: outputLanguage || 'original',
+            titlePresetId: titlePresetId || null,
+            introEnabled: introEnabled ?? false,
+            introTemplateId: introTemplateId || null,
+            introDisplayOnly: true,
+          },
+        })
+        .select()
+        .single();
+      if (projectError) throw new Error(`프로젝트 생성 실패: ${projectError.message}`);
+
+      const { data: job, error: jobError } = await supabase
+        .from('jobs')
+        .insert({ project_id: project.id, status: 'queued', kind: 'video_edit' })
+        .select()
+        .single();
+      if (jobError) throw new Error(`job 생성 실패: ${jobError.message}`);
+
+      if (wait === false) {
+        runVideoEditPipeline({ projectId: project.id, jobId: job.id }).catch((err) =>
+          console.error('[create_video_edit] 백그라운드 파이프라인 실패', err)
+        );
+        return textResult({ projectId: project.id, jobId: job.id, status: 'queued', note: '백그라운드로 처리 중입니다. get_job_status(jobId)로 확인하세요.' });
+      }
+
+      await runVideoEditPipeline({ projectId: project.id, jobId: job.id });
+      const finalJob = await fetchJobWithProject(job.id);
+      return textResult({
+        projectId: project.id,
+        jobId: job.id,
         status: finalJob.status,
         videoUrl: finalJob.video_url,
         errorMessage: finalJob.error_message,

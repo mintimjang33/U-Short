@@ -7,6 +7,7 @@ import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
 import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
 import { CutDaeriLayout } from './layouts/CutDaeriLayout.jsx';
 import { InstatoonPanel } from './layouts/InstatoonPanel.jsx';
+import { VideoEditLayout } from './layouts/VideoEditLayout.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
 import { DEFAULT_CAPTION_ANIMATION_ID } from './captionAnimations.js';
 import { DEFAULT_TITLE_PRESET_ID } from './titlePresets.js';
@@ -54,6 +55,7 @@ const LAYOUTS = [
   ['ImageDarkLayout', ImageDarkLayout],
   ['ViralMintLayout', ViralMintLayout],
   ['CutDaeriLayout', CutDaeriLayout],
+  ['VideoEditLayout', VideoEditLayout],
 ];
 
 export const RemotionRoot = () => {
