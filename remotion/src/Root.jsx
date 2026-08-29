@@ -6,6 +6,7 @@ import { FullFocusedLayout } from './layouts/FullFocusedLayout.jsx';
 import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
 import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
 import { CutDaeriLayout } from './layouts/CutDaeriLayout.jsx';
+import { InstatoonPanel } from './layouts/InstatoonPanel.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
 import { DEFAULT_CAPTION_ANIMATION_ID } from './captionAnimations.js';
 import { DEFAULT_TITLE_PRESET_ID } from './titlePresets.js';
@@ -74,6 +75,17 @@ export const RemotionRoot = () => {
       ))}
       {/* U-OneShot 컷대리는 16:9도 지원해야 해서, 기존 LAYOUTS 루프(전부 1080x1920 고정)와
           별개로 가로 버전 하나만 추가로 등록한다. 다른 레이아웃엔 영향 없음. */}
+      {/* 인스타툰 1컷 정지 프레임. 비디오가 아니라 단일 스틸 이미지라 durationInFrames=1,
+          withIntro/calculateMetadata 등 캡션-비디오 전용 로직은 적용하지 않는다. */}
+      <Composition
+        id="InstatoonPanel"
+        component={InstatoonPanel}
+        width={1080}
+        height={1080}
+        fps={FPS}
+        durationInFrames={1}
+        defaultProps={{ backgroundImageUrl: null, text: '' }}
+      />
       <Composition
         id="CutDaeriLayoutHorizontal"
         component={withIntro(CutDaeriLayout)}
