@@ -30,7 +30,9 @@ dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 // 프로젝트 루트의 lib/*를 그대로 재사용한다 (중복 구현 안 함) — dotenv.config()가 먼저 실행돼서
 // 이 모듈들이 process.env를 읽을 때 이미 .env.local 값이 채워져 있다.
 const { getSupabaseServerClient } = await import('../lib/supabase.js');
-const { runPipeline } = await import('../lib/pipeline.js');
+const { runPipeline, runVoiceUpdateRender } = await import('../lib/pipeline.js');
+const { extractBlogContent } = await import('../lib/extract.js');
+const { generateScript } = await import('../lib/generateScript.js');
 const OPTIONS = await import('../lib/options.js');
 const { DEFAULT_CAPTION_PRESET_ID } = await import('../remotion/src/captionPresets.js');
 const { searchNaverNews } = await import('../lib/naverNews.js');
@@ -312,6 +314,108 @@ server.registerTool(
         videoUrl: finalJob.video_url,
         errorMessage: finalJob.error_message,
       });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'regenerate_voice',
+  {
+    description:
+      '⑩ 파이프라인 단계별 분리 실행: 이미 완료된 프로젝트의 대본/장면은 그대로 두고 음성만 다시 만든다 ' +
+      '(voiceProvider/voice/voiceSpeed 중 바꾸고 싶은 것만 넘기면 됨). 음성이 바뀌면 자막 타이밍도 다시 맞춰지고 재렌더링된다. ' +
+      'wait=true(기본)면 완료까지 기다렸다가 새 영상 URL을 바로 돌려준다.',
+    inputSchema: {
+      projectId: z.string(),
+      voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional(),
+      voice: z.string().optional().describe('음성 페르소나(voiceProvider가 fal일 때만 적용)'),
+      voiceSpeed: z.number().min(0.7).max(1.2).optional(),
+      wait: z.boolean().optional().describe('기본 true'),
+    },
+  },
+  async ({ projectId, voiceProvider, voice, voiceSpeed, wait }) => {
+    try {
+      const { data: project, error: fetchError } = await supabase.from('projects').select('options').eq('id', projectId).maybeSingle();
+      if (fetchError) throw new Error(fetchError.message);
+      if (!project) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+
+      const overrides = {};
+      if (voiceProvider) overrides.voiceProvider = voiceProvider;
+      if (voice) overrides.voice = voice;
+      if (voiceSpeed) overrides.voiceSpeed = voiceSpeed;
+      const nextOptions = { ...(project.options || {}), ...overrides };
+
+      const { error: updateError } = await supabase.from('projects').update({ options: nextOptions }).eq('id', projectId);
+      if (updateError) throw new Error(updateError.message);
+
+      const { data: job, error: jobError } = await supabase
+        .from('jobs')
+        .insert({ project_id: projectId, status: 'queued', kind: 'voice_update' })
+        .select()
+        .single();
+      if (jobError) throw new Error(`job 생성 실패: ${jobError.message}`);
+
+      if (wait === false) {
+        runVoiceUpdateRender({ projectId, jobId: job.id }).catch((err) => console.error('[regenerate_voice] 백그라운드 실패', err));
+        return textResult({ jobId: job.id, status: 'queued', note: '백그라운드로 처리 중입니다. get_job_status(jobId)로 확인하세요.' });
+      }
+
+      await runVoiceUpdateRender({ projectId, jobId: job.id });
+      const finalJob = await fetchJobWithProject(job.id);
+      return textResult({ jobId: job.id, status: finalJob.status, videoUrl: finalJob.video_url, errorMessage: finalJob.error_message });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'preview_script_regenerate',
+  {
+    description:
+      '⑩ 파이프라인 단계별 분리 실행: 이 프로젝트의 원본 소스로 대본만 다시 만들어서 미리보기로 돌려준다. ' +
+      'DB를 건드리지 않고 렌더링도 하지 않는다 — 마음에 들면 create_shorts를 sourceText로 새로 호출해서 실제 제작할 것.',
+    inputSchema: {
+      projectId: z.string(),
+      style: z.enum(['summary', 'hook', 'list', 'shopping', 'twist-reveal']).optional(),
+      targetChars: z.number().int().min(30).optional(),
+      scriptStyleId: z.string().optional().describe('save_script_style로 저장해둔 커스텀 스타일 id'),
+    },
+  },
+  async ({ projectId, style, targetChars, scriptStyleId }) => {
+    try {
+      const { data: project, error } = await supabase.from('projects').select('*').eq('id', projectId).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!project) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+
+      let sourceText = project.source_text || null;
+      if (project.source_url) {
+        const extracted = await extractBlogContent(project.source_url);
+        sourceText = sourceText || extracted.text;
+      }
+      if (!sourceText) throw new Error('이 프로젝트는 원본 텍스트가 없어서 대본을 다시 만들 수 없습니다.');
+
+      let customStyleDescription;
+      if (scriptStyleId) {
+        const { data: styleRow } = await supabase.from('script_styles').select('style_description').eq('id', scriptStyleId).maybeSingle();
+        customStyleDescription = styleRow?.style_description;
+      }
+
+      const options = project.options || {};
+      const script = await generateScript({
+        sourceText,
+        planningMode: options.planningMode || 'auto',
+        style: style || options.style || 'summary',
+        outputLanguage: options.outputLanguage || 'original',
+        lengthMode: options.lengthMode || 'shortform',
+        targetChars: targetChars || options.targetChars || undefined,
+        customStyleDescription,
+        provider: options.scriptProvider,
+      });
+
+      return textResult(script);
     } catch (err) {
       return errorResult(err);
     }

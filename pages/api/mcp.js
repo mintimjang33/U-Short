@@ -14,6 +14,8 @@ import { searchNaverNews } from '../../lib/naverNews.js';
 import { analyzeScriptStyle } from '../../lib/analyzeScriptStyle.js';
 import { generateImage } from '../../lib/generateImage.js';
 import { loadRemoteConfig } from '../../lib/remoteConfig.js';
+import { extractBlogContent } from '../../lib/extract.js';
+import { generateScript } from '../../lib/generateScript.js';
 import crypto from 'node:crypto';
 
 const GITHUB_REPO = 'mintimjang33/U-Short';
@@ -195,6 +197,101 @@ function buildServer() {
         if (insertError) throw new Error(insertError.message);
 
         return textResult({ newJobId: newJob.id, status: 'queued' });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'regenerate_voice',
+    {
+      title: '음성만 재생성 (큐에 등록)',
+      description:
+        '⑩ 파이프라인 단계별 분리 실행: 완료된 프로젝트의 대본/장면은 그대로 두고 음성만 다시 만든다. ' +
+        'job을 큐에 넣기만 하고 바로 반환 — 실제 처리(음성+자막+렌더링)는 PC 워커가 담당.',
+      inputSchema: {
+        projectId: z.string(),
+        voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional(),
+        voice: z.string().optional(),
+        voiceSpeed: z.number().min(0.7).max(1.2).optional(),
+      },
+    },
+    async ({ projectId, voiceProvider, voice, voiceSpeed }) => {
+      try {
+        const { data: project, error: fetchError } = await supabase.from('projects').select('options').eq('id', projectId).maybeSingle();
+        if (fetchError) throw new Error(fetchError.message);
+        if (!project) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+
+        const overrides = {};
+        if (voiceProvider) overrides.voiceProvider = voiceProvider;
+        if (voice) overrides.voice = voice;
+        if (voiceSpeed) overrides.voiceSpeed = voiceSpeed;
+        const nextOptions = { ...(project.options || {}), ...overrides };
+
+        const { error: updateError } = await supabase.from('projects').update({ options: nextOptions }).eq('id', projectId);
+        if (updateError) throw new Error(updateError.message);
+
+        const { data: job, error: jobError } = await supabase
+          .from('jobs')
+          .insert({ project_id: projectId, status: 'queued', kind: 'voice_update' })
+          .select()
+          .single();
+        if (jobError) throw new Error(`job 생성 실패: ${jobError.message}`);
+
+        return textResult({ jobId: job.id, status: 'queued', note: 'PC의 워커(npm run worker)가 켜져 있어야 처리됩니다. get_job_status(jobId)로 확인.' });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'preview_script_regenerate',
+    {
+      title: '대본 미리보기 재생성',
+      description:
+        '⑩ 파이프라인 단계별 분리 실행: 이 프로젝트의 원본 소스로 대본만 다시 만들어서 미리보기로 돌려준다. ' +
+        'DB를 건드리지 않고 렌더링도 하지 않는다.',
+      inputSchema: {
+        projectId: z.string(),
+        style: z.enum(['summary', 'hook', 'list', 'shopping', 'twist-reveal']).optional(),
+        targetChars: z.number().int().min(30).optional(),
+        scriptStyleId: z.string().optional(),
+      },
+    },
+    async ({ projectId, style, targetChars, scriptStyleId }) => {
+      try {
+        const { data: project, error } = await supabase.from('projects').select('*').eq('id', projectId).maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!project) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+
+        let sourceText = project.source_text || null;
+        if (project.source_url) {
+          const extracted = await extractBlogContent(project.source_url);
+          sourceText = sourceText || extracted.text;
+        }
+        if (!sourceText) throw new Error('이 프로젝트는 원본 텍스트가 없어서 대본을 다시 만들 수 없습니다.');
+
+        let customStyleDescription;
+        if (scriptStyleId) {
+          const { data: styleRow } = await supabase.from('script_styles').select('style_description').eq('id', scriptStyleId).maybeSingle();
+          customStyleDescription = styleRow?.style_description;
+        }
+
+        const options = project.options || {};
+        const script = await generateScript({
+          sourceText,
+          planningMode: options.planningMode || 'auto',
+          style: style || options.style || 'summary',
+          outputLanguage: options.outputLanguage || 'original',
+          lengthMode: options.lengthMode || 'shortform',
+          targetChars: targetChars || options.targetChars || undefined,
+          customStyleDescription,
+          provider: options.scriptProvider,
+        });
+
+        return textResult(script);
       } catch (err) {
         return errorResult(err);
       }

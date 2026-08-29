@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const { getSupabaseServerClient } = await import('../lib/supabase.js');
-const { runPipeline, runSceneUpdateRender } = await import('../lib/pipeline.js');
+const { runPipeline, runSceneUpdateRender, runVoiceUpdateRender } = await import('../lib/pipeline.js');
 // U-OneShot 컷대리(별도 Next.js 앱, 같은 Supabase 프로젝트 공유)용 — uos_cutdaeri_projects는
 // 이 워커의 jobs/projects 테이블과 무관한 독립 테이블이라 큐잉 방식만 폴링에 추가하고,
 // 기존 jobs 처리 로직(pickNextQueuedJob 등)은 전혀 건드리지 않는다.
@@ -87,6 +87,8 @@ async function main() {
       try {
         if (job.kind === 'scene_update') {
           await runSceneUpdateRender({ projectId: job.project_id, jobId: job.id });
+        } else if (job.kind === 'voice_update') {
+          await runVoiceUpdateRender({ projectId: job.project_id, jobId: job.id });
         } else {
           await runPipeline({ projectId: job.project_id, jobId: job.id });
         }

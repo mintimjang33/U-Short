@@ -26,10 +26,31 @@ export const PATCH = withApiErrorHandling(async (request, { params }) => {
 
   const supabase = getSupabaseServerClient();
 
-  if (body.folderId !== undefined && !Array.isArray(body.scenes)) {
+  if (body.folderId !== undefined && !Array.isArray(body.scenes) && !body.voiceOptions) {
     const { error } = await supabase.from('projects').update({ folder_id: body.folderId }).eq('id', id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
+  }
+
+  // ⑩ 파이프라인 단계별 분리 실행: 대본/장면은 그대로, 음성 설정(provider/voice/speed)만 바꿔서
+  // 음성+자막+렌더링만 다시 돈다(extract/script 단계 스킵) — lib/pipeline.js의 runVoiceUpdateRender.
+  if (body.voiceOptions) {
+    const { data: project, error: fetchError } = await supabase.from('projects').select('options').eq('id', id).maybeSingle();
+    if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
+    if (!project) return NextResponse.json({ error: '프로젝트를 찾을 수 없습니다.' }, { status: 404 });
+
+    const nextOptions = { ...(project.options || {}), ...body.voiceOptions };
+    const { error: updateError } = await supabase.from('projects').update({ options: nextOptions }).eq('id', id);
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+
+    const { data: job, error: jobError } = await supabase
+      .from('jobs')
+      .insert({ project_id: id, status: 'queued', kind: 'voice_update' })
+      .select()
+      .single();
+    if (jobError) return NextResponse.json({ error: `재생성 job 생성 실패: ${jobError.message}` }, { status: 500 });
+
+    return NextResponse.json({ jobId: job.id }, { status: 202 });
   }
 
   if (!Array.isArray(body.scenes)) {
