@@ -34,6 +34,7 @@ const { runPipeline } = await import('../lib/pipeline.js');
 const OPTIONS = await import('../lib/options.js');
 const { DEFAULT_CAPTION_PRESET_ID } = await import('../remotion/src/captionPresets.js');
 const { searchNaverNews } = await import('../lib/naverNews.js');
+const { analyzeScriptStyle } = await import('../lib/analyzeScriptStyle.js');
 
 let supabase;
 try {
@@ -131,6 +132,7 @@ server.registerTool(
       outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional().describe('기본 original(원문유지)'),
       lengthMode: z.enum(['shortform', 'longform', 'extended']).optional().describe('기본 shortform. targetChars를 주면 이 값은 무시됨'),
       targetChars: z.number().int().min(30).optional().describe('대본 목표 글자수 자유 입력(30자 이상). 지정하면 lengthMode 대신 이 값 기준으로 분량을 맞춘다'),
+      scriptStyleId: z.string().optional().describe('save_script_style로 저장해둔 커스텀 대본 스타일 id. 지정하면 style(프리셋) 대신 그 스타일로 대본을 쓴다. list_script_styles로 목록 확인 가능'),
       layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional().describe('기본 info'),
       captionPresetId: z.string().optional().describe('기본 existing-preset-bold-white-outline, list_options로 전체 목록 확인 가능'),
       scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional().describe('기본 claude'),
@@ -165,6 +167,7 @@ server.registerTool(
         outputLanguage,
         lengthMode,
         targetChars,
+        scriptStyleId,
         layoutId,
         captionPresetId,
         scriptProvider,
@@ -188,12 +191,25 @@ server.registerTool(
 
       const defaults = (await getOwnerDefaults()) || {};
 
+      let customStyleDescription;
+      if (scriptStyleId) {
+        const { data: styleRow, error: styleError } = await supabase
+          .from('script_styles')
+          .select('style_description')
+          .eq('id', scriptStyleId)
+          .maybeSingle();
+        if (styleError) throw new Error(`스타일 조회 실패: ${styleError.message}`);
+        if (!styleRow) throw new Error(`scriptStyleId를 찾을 수 없습니다: ${scriptStyleId}`);
+        customStyleDescription = styleRow.style_description;
+      }
+
       const options = {
         planningMode: planningMode || (sourceText && !sourceUrl ? 'direct' : 'auto'),
         style: style || defaults.style || 'summary',
         outputLanguage: outputLanguage || defaults.output_language || 'original',
         lengthMode: lengthMode || defaults.length_mode || 'shortform',
         targetChars: targetChars || null,
+        customStyleDescription: customStyleDescription || null,
         scriptProvider: scriptProvider || defaults.script_provider || 'claude',
         voiceProvider: voiceProvider || defaults.voice_provider || 'fal',
         voice: voice || defaults.voice_id || null,
@@ -371,6 +387,51 @@ server.registerTool(
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
       return textResult({ url: data.publicUrl });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'save_script_style',
+  {
+    description:
+      '레퍼런스 대본(기존에 쓰던 대본 예시)을 분석해서 말투/톤/구조를 뽑아내고, 이름을 붙여 저장한다. ' +
+      '저장된 스타일은 create_shorts의 scriptStyleId로 재사용할 수 있다(매번 레퍼런스를 다시 붙여넣지 않아도 됨). ' +
+      'Qventor 등에서 "대본 스타일 관리"라고 부르는 기능과 같다.',
+    inputSchema: {
+      name: z.string().describe('이 스타일을 나중에 알아볼 이름 (예: "내 유튜브 채널 톤")'),
+      referenceText: z.string().describe('참고할 레퍼런스 대본 원문 (최소 30자, 최대 20,000자)'),
+    },
+  },
+  async ({ name, referenceText }) => {
+    try {
+      const styleDescription = await analyzeScriptStyle(referenceText);
+      const { data, error } = await supabase
+        .from('script_styles')
+        .insert({ name, reference_text: referenceText, style_description: styleDescription })
+        .select()
+        .single();
+      if (error) throw new Error(`저장 실패: ${error.message}`);
+      return textResult({ id: data.id, name: data.name, styleDescription: data.style_description });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'list_script_styles',
+  {
+    description: 'save_script_style로 저장해둔 커스텀 대본 스타일 목록을 보여준다.',
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      const { data, error } = await supabase.from('script_styles').select('id, name, style_description, created_at').order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return textResult(data);
     } catch (err) {
       return errorResult(err);
     }

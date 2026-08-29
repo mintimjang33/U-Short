@@ -41,6 +41,47 @@ export default function NewProjectPage() {
   const [outputLanguage, setOutputLanguage] = useState('original');
   const [lengthMode, setLengthMode] = useState('shortform');
   const [targetChars, setTargetChars] = useState('');
+  const [scriptStyles, setScriptStyles] = useState([]);
+  const [scriptStyleId, setScriptStyleId] = useState('');
+  const [showStyleForm, setShowStyleForm] = useState(false);
+  const [newStyleName, setNewStyleName] = useState('');
+  const [newStyleReference, setNewStyleReference] = useState('');
+  const [savingStyle, setSavingStyle] = useState(false);
+  const [styleFormError, setStyleFormError] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/script-styles')
+      .then((res) => res.json())
+      .then((data) => Array.isArray(data) && setScriptStyles(data))
+      .catch(() => {});
+  }, []);
+
+  async function saveScriptStyle() {
+    if (!newStyleName.trim() || newStyleReference.trim().length < 30) {
+      setStyleFormError('이름과 레퍼런스 대본(30자 이상)을 입력해주세요.');
+      return;
+    }
+    setSavingStyle(true);
+    setStyleFormError(null);
+    try {
+      const res = await fetch('/api/script-styles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newStyleName.trim(), referenceText: newStyleReference.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '스타일 저장 실패');
+      setScriptStyles((prev) => [data, ...prev]);
+      setScriptStyleId(data.id);
+      setShowStyleForm(false);
+      setNewStyleName('');
+      setNewStyleReference('');
+    } catch (err) {
+      setStyleFormError(err.message);
+    } finally {
+      setSavingStyle(false);
+    }
+  }
   const [layoutId, setLayoutId] = useState(initialLayoutId);
   const [captionPresetId, setCaptionPresetId] = useState(initialCaptionPresetId);
   const [captionAnimationId, setCaptionAnimationId] = useState('none');
@@ -273,6 +314,7 @@ export default function NewProjectPage() {
           outputLanguage,
           lengthMode,
           targetChars: targetChars ? Number(targetChars) : null,
+          scriptStyleId: scriptStyleId || null,
           scriptProvider,
           planningMode: sourceMode === 'manual' ? 'direct' : 'auto',
         }),
@@ -419,10 +461,44 @@ export default function NewProjectPage() {
           <label>대본 스타일</label>
           <div className="pill-group">
             {SCRIPT_STYLES.map((s) => (
-              <Pill key={s.id} selected={style === s.id} onClick={() => setStyle(s.id)}>
+              <Pill key={s.id} selected={!scriptStyleId && style === s.id} onClick={() => { setStyle(s.id); setScriptStyleId(''); }}>
                 {s.label}
               </Pill>
             ))}
+            {scriptStyles.map((s) => (
+              <Pill key={s.id} selected={scriptStyleId === s.id} onClick={() => setScriptStyleId(s.id)}>
+                🎯 {s.name}
+              </Pill>
+            ))}
+          </div>
+          <div className="field-hint">
+            {!showStyleForm ? (
+              <button type="button" onClick={() => setShowStyleForm(true)} style={{ background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>
+                + 내 대본으로 커스텀 스타일 학습하기
+              </button>
+            ) : (
+              <div style={{ marginTop: 8 }}>
+                <input
+                  type="text"
+                  placeholder="스타일 이름 (예: 내 유튜브 채널 톤)"
+                  value={newStyleName}
+                  onChange={(e) => setNewStyleName(e.target.value)}
+                  style={{ width: '100%', marginBottom: 6 }}
+                />
+                <textarea
+                  placeholder="참고할 레퍼런스 대본을 붙여넣으세요 (최소 30자, 최대 20,000자) — 말투/톤/구조만 분석하고 저장합니다."
+                  value={newStyleReference}
+                  onChange={(e) => setNewStyleReference(e.target.value)}
+                  rows={5}
+                  style={{ width: '100%', marginBottom: 6 }}
+                />
+                {styleFormError && <div style={{ color: '#f66', marginBottom: 6 }}>{styleFormError}</div>}
+                <button type="button" onClick={saveScriptStyle} disabled={savingStyle}>
+                  {savingStyle ? '분석 중...' : '분석 및 저장'}
+                </button>{' '}
+                <button type="button" onClick={() => setShowStyleForm(false)}>취소</button>
+              </div>
+            )}
           </div>
         </div>
 

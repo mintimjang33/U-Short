@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSupabaseServerClient } from '../../../lib/supabase.js';
 import { withApiErrorHandling } from '../../../lib/apiHandler.js';
 import { loadRemoteConfig } from '../../../lib/remoteConfig.js';
 import { extractBlogContent } from '../../../lib/extract.js';
@@ -11,7 +12,14 @@ import { researchTopic } from '../../../lib/researchTopic.js';
 export const POST = withApiErrorHandling(async (request) => {
   await loadRemoteConfig();
   const body = await request.json();
-  const { sourceUrl, sourceText, topic, style, outputLanguage, lengthMode, targetChars, scriptProvider, planningMode } = body;
+  const { sourceUrl, sourceText, topic, style, outputLanguage, lengthMode, targetChars, scriptStyleId, scriptProvider, planningMode } = body;
+
+  let customStyleDescription;
+  if (scriptStyleId) {
+    const supabase = getSupabaseServerClient();
+    const { data: styleRow } = await supabase.from('script_styles').select('style_description').eq('id', scriptStyleId).maybeSingle();
+    customStyleDescription = styleRow?.style_description;
+  }
 
   let text = sourceText || null;
   let images = [];
@@ -46,6 +54,7 @@ export const POST = withApiErrorHandling(async (request) => {
     outputLanguage: outputLanguage || 'original',
     lengthMode: lengthMode || 'shortform',
     targetChars: targetChars || undefined,
+    customStyleDescription,
     provider: scriptProvider,
   });
 

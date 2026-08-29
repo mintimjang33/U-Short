@@ -11,9 +11,10 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import * as OPTIONS from '../../lib/options.js';
 import { searchNaverNews } from '../../lib/naverNews.js';
+import { analyzeScriptStyle } from '../../lib/analyzeScriptStyle.js';
 
 const GITHUB_REPO = 'mintimjang33/U-Short';
-const TABLES = ['projects', 'jobs', 'templates'];
+const TABLES = ['projects', 'jobs', 'templates', 'script_styles'];
 const ACCESS_TOKEN = process.env.MCP_SHARED_SECRET;
 
 function getSupabase() {
@@ -75,6 +76,7 @@ function buildServer() {
         outputLanguage: z.enum(['original', 'ko', 'en', 'ja']).optional(),
         lengthMode: z.enum(['shortform', 'longform', 'extended']).optional(),
         targetChars: z.number().int().min(30).optional().describe('대본 목표 글자수 자유 입력(30자 이상). 지정하면 lengthMode 대신 이 값 기준으로 분량을 맞춘다'),
+        scriptStyleId: z.string().optional().describe('save_script_style로 저장해둔 커스텀 대본 스타일 id. 지정하면 style 대신 그 스타일로 대본을 쓴다'),
         layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional(),
         captionPresetId: z.string().optional(),
         scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional(),
@@ -98,12 +100,25 @@ function buildServer() {
 
         const defaults = (await getOwnerDefaults(supabase)) || {};
 
+        let customStyleDescription;
+        if (args.scriptStyleId) {
+          const { data: styleRow, error: styleError } = await supabase
+            .from('script_styles')
+            .select('style_description')
+            .eq('id', args.scriptStyleId)
+            .maybeSingle();
+          if (styleError) throw new Error(`스타일 조회 실패: ${styleError.message}`);
+          if (!styleRow) throw new Error(`scriptStyleId를 찾을 수 없습니다: ${args.scriptStyleId}`);
+          customStyleDescription = styleRow.style_description;
+        }
+
         const options = {
           planningMode: args.planningMode || (args.sourceText && !args.sourceUrl ? 'direct' : 'auto'),
           style: args.style || defaults.style || 'summary',
           outputLanguage: args.outputLanguage || defaults.output_language || 'original',
           lengthMode: args.lengthMode || defaults.length_mode || 'shortform',
           targetChars: args.targetChars || null,
+          customStyleDescription: customStyleDescription || null,
           scriptProvider: args.scriptProvider || defaults.script_provider || 'claude',
           voiceProvider: args.voiceProvider || defaults.voice_provider || 'fal',
           voice: args.voice || defaults.voice_id || null,
@@ -202,6 +217,47 @@ function buildServer() {
           videoUrl: data.video_url,
           title: [data.projects?.title_line1, data.projects?.title_line2].filter(Boolean).join(' / '),
         });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'save_script_style',
+    {
+      title: '커스텀 대본 스타일 학습·저장',
+      description:
+        '레퍼런스 대본을 분석해서 말투/톤/구조를 뽑아내고 이름을 붙여 저장한다. create_shorts의 scriptStyleId로 재사용 가능.',
+      inputSchema: {
+        name: z.string().describe('스타일 이름'),
+        referenceText: z.string().describe('레퍼런스 대본 원문(최소 30자, 최대 20,000자)'),
+      },
+    },
+    async ({ name, referenceText }) => {
+      try {
+        const styleDescription = await analyzeScriptStyle(referenceText);
+        const { data, error } = await supabase
+          .from('script_styles')
+          .insert({ name, reference_text: referenceText, style_description: styleDescription })
+          .select()
+          .single();
+        if (error) throw new Error(`저장 실패: ${error.message}`);
+        return textResult({ id: data.id, name: data.name, styleDescription: data.style_description });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_script_styles',
+    { title: '저장된 대본 스타일 목록', description: 'save_script_style로 저장해둔 커스텀 대본 스타일 목록을 보여준다.' },
+    async () => {
+      try {
+        const { data, error } = await supabase.from('script_styles').select('id, name, style_description, created_at').order('created_at', { ascending: false });
+        if (error) throw new Error(error.message);
+        return textResult(data);
       } catch (err) {
         return errorResult(err);
       }
