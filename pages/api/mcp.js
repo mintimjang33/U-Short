@@ -17,7 +17,7 @@ import { loadRemoteConfig } from '../../lib/remoteConfig.js';
 import crypto from 'node:crypto';
 
 const GITHUB_REPO = 'mintimjang33/U-Short';
-const TABLES = ['projects', 'jobs', 'templates', 'script_styles', 'image_style_sets'];
+const TABLES = ['projects', 'jobs', 'templates', 'script_styles', 'image_style_sets', 'instatoon_projects'];
 const BUCKET = 'shorts';
 const ACCESS_TOKEN = process.env.MCP_SHARED_SECRET;
 
@@ -350,6 +350,53 @@ function buildServer() {
         const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
 
         return textResult({ url: pub.publicUrl });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_instatoon',
+    {
+      title: '인스타툰(N컷 카드형 웹툰) 제작 요청 (큐에 등록)',
+      description:
+        '주제를 인스타툰(N컷)으로 제작 요청한다. job을 큐에 넣기만 하고 바로 반환 — 실제 처리는 PC 워커(npm run worker)가 담당. ' +
+        'get_instatoon_status(projectId)로 진행 상황 확인. characterStyleSetId 생략시 1컷 결과를 자동으로 이후 컷 레퍼런스로 재사용.',
+      inputSchema: {
+        topic: z.string().describe('인스타툰 주제'),
+        panelCount: z.number().int().min(2).max(10).optional().describe('컷 수, 기본 6'),
+        characterStyleSetId: z.string().optional().describe('create_image_style_set으로 저장해둔 캐릭터 세트 id'),
+      },
+    },
+    async ({ topic, panelCount, characterStyleSetId }) => {
+      try {
+        const { data, error } = await supabase
+          .from('instatoon_projects')
+          .insert({ topic, panel_count: panelCount || 6, character_style_set_id: characterStyleSetId || null, status: 'queued' })
+          .select()
+          .single();
+        if (error) throw new Error(`프로젝트 생성 실패: ${error.message}`);
+        return textResult({ projectId: data.id, status: 'queued', note: 'PC의 워커(npm run worker)가 켜져 있어야 처리됩니다. get_instatoon_status(projectId)로 확인.' });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_instatoon_status',
+    {
+      title: '인스타툰 진행 상태 조회',
+      description: '인스타툰 프로젝트의 진행 상태(stage/status/컷별 이미지 URL)를 조회한다.',
+      inputSchema: { projectId: z.string() },
+    },
+    async ({ projectId }) => {
+      try {
+        const { data, error } = await supabase.from('instatoon_projects').select('*').eq('id', projectId).maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+        return textResult({ status: data.status, stage: data.stage, errorMessage: data.error_message, panels: data.panels });
       } catch (err) {
         return errorResult(err);
       }

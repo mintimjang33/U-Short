@@ -21,6 +21,7 @@ const { runPipeline, runSceneUpdateRender } = await import('../lib/pipeline.js')
 // 이 워커의 jobs/projects 테이블과 무관한 독립 테이블이라 큐잉 방식만 폴링에 추가하고,
 // 기존 jobs 처리 로직(pickNextQueuedJob 등)은 전혀 건드리지 않는다.
 const { runCutDaeriRender } = await import('../lib/cutDaeriPipeline.js');
+const { runInstatoonPipeline } = await import('../lib/instatoonPipeline.js');
 
 const POLL_INTERVAL_MS = 5000;
 let running = true;
@@ -60,9 +61,24 @@ async function pickNextCutDaeriProject(supabase) {
   return data;
 }
 
+async function pickNextInstatoonProject(supabase) {
+  const { data, error } = await supabase
+    .from('instatoon_projects')
+    .select('id, topic')
+    .eq('status', 'queued')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('[worker] 인스타툰 프로젝트 조회 실패:', error.message);
+    return null;
+  }
+  return data;
+}
+
 async function main() {
   const supabase = getSupabaseServerClient();
-  console.log('[worker] 시작됨. 5초마다 queued job / 컷대리 렌더링 대기열을 확인합니다. (Ctrl+C로 종료)');
+  console.log('[worker] 시작됨. 5초마다 queued job / 컷대리 렌더링 / 인스타툰 대기열을 확인합니다. (Ctrl+C로 종료)');
 
   while (running) {
     const job = await pickNextQueuedJob(supabase);
@@ -89,6 +105,18 @@ async function main() {
         console.log(`[worker] 컷대리 렌더링 완료: ${videoUrl}`);
       } catch (err) {
         console.error(`[worker] 컷대리 렌더링 중 예외: ${cutDaeriProject.id}`, err);
+      }
+      continue;
+    }
+
+    const instatoonProject = await pickNextInstatoonProject(supabase);
+    if (instatoonProject) {
+      console.log(`[worker] 인스타툰 생성 시작: ${instatoonProject.topic} (${instatoonProject.id})`);
+      try {
+        await runInstatoonPipeline({ projectId: instatoonProject.id });
+        console.log(`[worker] 인스타툰 생성 완료: ${instatoonProject.id}`);
+      } catch (err) {
+        console.error(`[worker] 인스타툰 생성 중 예외: ${instatoonProject.id}`, err);
       }
       continue;
     }
