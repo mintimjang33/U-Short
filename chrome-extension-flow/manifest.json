@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "유쇼츠 Google Flow 연동",
+  "version": "1.0",
+  "description": "유쇼츠의 이미지 생성 요청을 내 Google Flow 구독 세션으로 대신 처리합니다.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://labs.google/*",
+    "https://u-short-beige.vercel.app/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://labs.google/fx/tools/flow*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

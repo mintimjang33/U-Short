@@ -13,6 +13,7 @@ import * as OPTIONS from '../../lib/options.js';
 import { searchNaverNews } from '../../lib/naverNews.js';
 import { analyzeScriptStyle } from '../../lib/analyzeScriptStyle.js';
 import { generateImage } from '../../lib/generateImage.js';
+import { mergeStyleRule } from '../../lib/mergeStyleRule.js';
 import { loadRemoteConfig } from '../../lib/remoteConfig.js';
 import { extractBlogContent } from '../../lib/extract.js';
 import { generateScript } from '../../lib/generateScript.js';
@@ -541,11 +542,48 @@ function buildServer() {
   );
 
   server.registerTool(
+    'add_style_correction',
+    {
+      title: '캐릭터/스타일 규칙 학습(교정 지적)',
+      description:
+        '생성된 이미지에서 뭐가 틀렸는지 한 문장으로 지적하면(예: "다리가 3개로 나옴, 2개여야 함"), ' +
+        '기존 learned_rules에 병합해서 저장한다. 다음부터 이 styleSetId로 generate_image를 호출할 때마다 ' +
+        '자동으로 프롬프트에 반영된다 — 매번 같은 지적을 반복할 필요가 없다.',
+      inputSchema: {
+        styleSetId: z.string().describe('list_image_style_sets로 확인'),
+        correction: z.string().describe('무엇이 잘못 나왔고 어떻게 고쳐야 하는지 한 문장으로'),
+      },
+    },
+    async ({ styleSetId, correction }) => {
+      try {
+        const { data: set, error: fetchError } = await supabase.from('image_style_sets').select('*').eq('id', styleSetId).maybeSingle();
+        if (fetchError) throw new Error(fetchError.message);
+        if (!set) throw new Error(`styleSetId를 찾을 수 없습니다: ${styleSetId}`);
+
+        const mergedRules = await mergeStyleRule({ existingRules: set.learned_rules, correction });
+
+        const { data: updated, error: updateError } = await supabase
+          .from('image_style_sets')
+          .update({ learned_rules: mergedRules })
+          .eq('id', styleSetId)
+          .select()
+          .single();
+        if (updateError) throw new Error(updateError.message);
+        return textResult(updated);
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
     'generate_image',
     {
       title: '이미지 생성 (fal Nano Banana)',
       description:
-        '프롬프트로 정적 이미지를 생성한다. styleSetId를 주면 레퍼런스 이미지 편집 방식으로 캐릭터·구도 일관성을 유지한다.',
+        '프롬프트로 정적 이미지를 생성한다. styleSetId를 주면 레퍼런스 이미지 편집 방식으로 캐릭터·구도 일관성을 유지한다. ' +
+        '(provider="google-flow"는 여기(원격/Vercel)에는 일부러 안 넣었음 — 반자동이라 사용자가 실제로 버튼을 누를 때까지 몇 분씩 걸릴 수 있는데, ' +
+        'Vercel 서버리스 함수는 그렇게 오래 못 기다린다. google-flow는 로컬 mcp-server의 generate_image에서만 쓸 것.)',
       inputSchema: {
         prompt: z.string().describe('이미지 프롬프트(영어 권장)'),
         styleSetId: z.string().optional().describe('list_image_style_sets로 확인 가능'),
@@ -565,6 +603,9 @@ function buildServer() {
           referenceImageUrls = set.reference_image_urls || [];
           const preset = OPTIONS.ART_STYLE_PRESETS.find((p) => p.id === set.art_style_id);
           if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
+          if (set.learned_rules && set.learned_rules.trim()) {
+            fullPrompt = `${fullPrompt}\n\nStyle rules learned from past corrections:\n${set.learned_rules.trim()}`;
+          }
         } else if (artStyleId) {
           const preset = OPTIONS.ART_STYLE_PRESETS.find((p) => p.id === artStyleId);
           if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;

@@ -38,6 +38,8 @@ const { DEFAULT_CAPTION_PRESET_ID } = await import('../remotion/src/captionPrese
 const { searchNaverNews } = await import('../lib/naverNews.js');
 const { analyzeScriptStyle } = await import('../lib/analyzeScriptStyle.js');
 const { generateImage } = await import('../lib/generateImage.js');
+const { queueFlowImageGeneration, getFlowGenerationStatus } = await import('../lib/generateImageViaFlow.js');
+const { mergeStyleRule } = await import('../lib/mergeStyleRule.js');
 
 let supabase;
 try {
@@ -744,6 +746,40 @@ server.registerTool(
 );
 
 server.registerTool(
+  'add_style_correction',
+  {
+    description:
+      '생성된 이미지에서 뭐가 틀렸는지 한 문장으로 지적하면(예: "다리가 3개로 나옴, 2개여야 함"), ' +
+      '기존 learned_rules에 병합해서 저장한다. 다음부터 이 styleSetId로 generate_image/create_instatoon을 ' +
+      '호출할 때마다 자동으로 프롬프트에 반영된다 — 매번 같은 지적을 반복할 필요가 없다.',
+    inputSchema: {
+      styleSetId: z.string().describe('list_image_style_sets로 확인'),
+      correction: z.string().describe('무엇이 잘못 나왔고 어떻게 고쳐야 하는지 한 문장으로'),
+    },
+  },
+  async ({ styleSetId, correction }) => {
+    try {
+      const { data: set, error: fetchError } = await supabase.from('image_style_sets').select('*').eq('id', styleSetId).maybeSingle();
+      if (fetchError) throw new Error(fetchError.message);
+      if (!set) throw new Error(`styleSetId를 찾을 수 없습니다: ${styleSetId}`);
+
+      const mergedRules = await mergeStyleRule({ existingRules: set.learned_rules, correction });
+
+      const { data: updated, error: updateError } = await supabase
+        .from('image_style_sets')
+        .update({ learned_rules: mergedRules })
+        .eq('id', styleSetId)
+        .select()
+        .single();
+      if (updateError) throw new Error(updateError.message);
+      return textResult(updated);
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
   'generate_image',
   {
     description:
@@ -758,9 +794,18 @@ server.registerTool(
         .optional()
         .describe('styleSetId 없이 화풍만 지정하고 싶을 때(레퍼런스 이미지 없이 텍스트→이미지)'),
       aspectRatio: z.enum(['auto', '1:1', '9:16', '16:9', '3:4', '4:3']).optional().describe('기본 9:16(쇼츠 세로)'),
+      provider: z
+        .enum(['nano-banana', 'google-flow'])
+        .optional()
+        .describe(
+          '기본 nano-banana(fal 정식 API, 즉시 처리해서 바로 URL을 돌려줌). google-flow는 종량과금 없이 사용자의 ' +
+            'Google Flow 구독으로 대신 생성하지만 반자동(사용자 PC 크롬 확장이 켜져 있어야 하고, Flow 탭에서 실제로 ' +
+            '생성 버튼을 눌러줘야 함)이라 몇 분 걸릴 수 있다 — 이 도구는 큐에 등록만 하고 taskId를 바로 돌려주니, ' +
+            'get_flow_generation_status(taskId)로 완료 여부를 따로 확인할 것.'
+        ),
     },
   },
-  async ({ prompt, styleSetId, artStyleId, aspectRatio }) => {
+  async ({ prompt, styleSetId, artStyleId, aspectRatio, provider }) => {
     try {
       let referenceImageUrls = [];
       let fullPrompt = prompt;
@@ -772,12 +817,29 @@ server.registerTool(
         referenceImageUrls = set.reference_image_urls || [];
         const preset = OPTIONS.ART_STYLE_PRESETS.find((p) => p.id === set.art_style_id);
         if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
+        if (set.learned_rules && set.learned_rules.trim()) {
+          fullPrompt = `${fullPrompt}\n\nStyle rules learned from past corrections:\n${set.learned_rules.trim()}`;
+        }
       } else if (artStyleId) {
         const preset = OPTIONS.ART_STYLE_PRESETS.find((p) => p.id === artStyleId);
         if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
       }
 
-      const { imageUrl } = await generateImage({ prompt: fullPrompt, referenceImageUrls, aspectRatio: aspectRatio || '9:16' });
+      if (provider === 'google-flow') {
+        const task = await queueFlowImageGeneration({ prompt: fullPrompt, aspectRatio: aspectRatio || '1:1', referenceImageUrls }, { supabase });
+        return textResult({
+          taskId: task.id,
+          status: task.status,
+          message: '크롬 확장 프로그램이 켜져 있으면 곧 Flow 탭에 프롬프트가 자동으로 채워집니다. 화면의 생성 버튼을 직접 눌러주세요. get_flow_generation_status로 완료 확인.',
+        });
+      }
+
+      const { imageUrl } = await generateImage({
+        prompt: fullPrompt,
+        referenceImageUrls,
+        aspectRatio: aspectRatio || '9:16',
+        provider: 'nano-banana',
+      });
 
       // fal 임시 URL은 만료될 수 있으므로 우리 Storage로 옮겨서 영구 URL을 돌려준다.
       const imgRes = await fetch(imageUrl);
@@ -789,6 +851,22 @@ server.registerTool(
       const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(storagePath);
 
       return textResult({ url: pub.publicUrl });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'get_flow_generation_status',
+  {
+    description: 'generate_image(provider: "google-flow")로 등록한 작업의 진행 상황을 확인한다. status가 completed면 result_url에 결과 이미지가 있다.',
+    inputSchema: { taskId: z.string() },
+  },
+  async ({ taskId }) => {
+    try {
+      const status = await getFlowGenerationStatus(taskId, { supabase });
+      return textResult(status);
     } catch (err) {
       return errorResult(err);
     }

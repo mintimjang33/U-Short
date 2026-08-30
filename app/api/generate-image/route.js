@@ -28,6 +28,9 @@ export const POST = withApiErrorHandling(async (request) => {
       const preset = ART_STYLE_PRESETS.find((p) => p.id === set.art_style_id);
       if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
     }
+    if (set.learned_rules && set.learned_rules.trim()) {
+      fullPrompt = `${fullPrompt}\n\nStyle rules learned from past corrections:\n${set.learned_rules.trim()}`;
+    }
   } else if (body.artStyleId) {
     const preset = ART_STYLE_PRESETS.find((p) => p.id === body.artStyleId);
     if (preset) fullPrompt = `${fullPrompt}, ${preset.promptModifier}`;
@@ -37,9 +40,15 @@ export const POST = withApiErrorHandling(async (request) => {
     prompt: fullPrompt,
     referenceImageUrls,
     aspectRatio: body.aspectRatio || '9:16',
+    provider: body.provider || 'nano-banana',
   });
 
-  // fal 임시 URL은 만료될 수 있으므로 우리 Storage로 옮겨서 영구 URL로 반환한다.
+  // google-flow는 generateImageViaFlow 안에서 이미 우리 Storage에 올려서 영구 URL을 반환한다 —
+  // fal 임시 URL만 다시 내려받아 재업로드하면 된다.
+  if (body.provider === 'google-flow') {
+    return NextResponse.json({ url: imageUrl });
+  }
+
   const imgRes = await fetch(imageUrl);
   if (!imgRes.ok) return NextResponse.json({ error: `생성된 이미지 다운로드 실패 (${imgRes.status})` }, { status: 500 });
   const buffer = Buffer.from(await imgRes.arrayBuffer());
