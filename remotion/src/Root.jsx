@@ -7,6 +7,7 @@ import { ImageDarkLayout } from './layouts/ImageDarkLayout.jsx';
 import { ViralMintLayout } from './layouts/ViralMintLayout.jsx';
 import { CutDaeriLayout } from './layouts/CutDaeriLayout.jsx';
 import { InstatoonPanel } from './layouts/InstatoonPanel.jsx';
+import { CardNewsPanel } from './layouts/CardNewsPanel.jsx';
 import { VideoEditLayout } from './layouts/VideoEditLayout.jsx';
 import { DEFAULT_CAPTION_PRESET_ID } from './captionPresets.js';
 import { DEFAULT_CAPTION_ANIMATION_ID } from './captionAnimations.js';
@@ -86,6 +87,16 @@ export const RemotionRoot = () => {
         fps={FPS}
         durationInFrames={1}
         defaultProps={{ backgroundImageUrl: null, text: '' }}
+      />
+      {/* 카드뉴스 1장 정지 프레임. InstatoonPanel과 같은 이유로 durationInFrames=1, withIntro 미적용. */}
+      <Composition
+        id="CardNewsPanel"
+        component={CardNewsPanel}
+        width={1080}
+        height={1080}
+        fps={FPS}
+        durationInFrames={1}
+        defaultProps={{ backgroundImageUrl: null, title: '', text: '', type: 'body' }}
       />
       <Composition
         id="CutDaeriLayoutHorizontal"

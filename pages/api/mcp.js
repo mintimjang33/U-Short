@@ -20,7 +20,7 @@ import { generateScript } from '../../lib/generateScript.js';
 import crypto from 'node:crypto';
 
 const GITHUB_REPO = 'mintimjang33/U-Short';
-const TABLES = ['projects', 'jobs', 'templates', 'script_styles', 'image_style_sets', 'instatoon_projects'];
+const TABLES = ['projects', 'jobs', 'templates', 'script_styles', 'image_style_sets', 'instatoon_projects', 'cardnews_projects'];
 const BUCKET = 'shorts';
 const ACCESS_TOKEN = process.env.MCP_SHARED_SECRET;
 
@@ -669,6 +669,53 @@ function buildServer() {
         if (error) throw new Error(error.message);
         if (!data) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
         return textResult({ status: data.status, stage: data.stage, errorMessage: data.error_message, panels: data.panels });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'create_cardnews',
+    {
+      title: '카드뉴스(정보 카드 N장) 제작 요청 (큐에 등록)',
+      description:
+        '주제를 카드뉴스로 제작 요청한다. job을 큐에 넣기만 하고 바로 반환 — 실제 처리는 PC 워커(npm run worker)가 담당. ' +
+        '1장은 표지(훅), 마지막 장은 요약/참여유도, 중간 장들은 정보 포인트. get_cardnews_status(projectId)로 진행 상황 확인.',
+      inputSchema: {
+        topic: z.string().describe('카드뉴스 주제'),
+        cardCount: z.number().int().min(3).max(10).optional().describe('카드 수, 기본 6'),
+        styleSetId: z.string().optional().describe('create_image_style_set으로 저장해둔 스타일 세트 id(선택)'),
+      },
+    },
+    async ({ topic, cardCount, styleSetId }) => {
+      try {
+        const { data, error } = await supabase
+          .from('cardnews_projects')
+          .insert({ topic, card_count: cardCount || 6, style_set_id: styleSetId || null, status: 'queued' })
+          .select()
+          .single();
+        if (error) throw new Error(`프로젝트 생성 실패: ${error.message}`);
+        return textResult({ projectId: data.id, status: 'queued', note: 'PC의 워커(npm run worker)가 켜져 있어야 처리됩니다. get_cardnews_status(projectId)로 확인.' });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_cardnews_status',
+    {
+      title: '카드뉴스 진행 상태 조회',
+      description: '카드뉴스 프로젝트의 진행 상태(stage/status/카드별 이미지 URL)를 조회한다.',
+      inputSchema: { projectId: z.string() },
+    },
+    async ({ projectId }) => {
+      try {
+        const { data, error } = await supabase.from('cardnews_projects').select('*').eq('id', projectId).maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+        return textResult({ status: data.status, stage: data.stage, errorMessage: data.error_message, cards: data.cards });
       } catch (err) {
         return errorResult(err);
       }

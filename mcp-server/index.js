@@ -921,6 +921,53 @@ server.registerTool(
 );
 
 server.registerTool(
+  'create_cardnews',
+  {
+    description:
+      '주제를 카드뉴스(정보성 카드 N장)로 자동 제작한다. 1장은 표지(훅), 마지막 장은 요약/참여유도, ' +
+      '중간 장들은 정보 포인트 1~2줄이다(HongHub 카드뉴스 포맷 규칙과 동일 컨벤션). 이 도구는 큐에 넣기만 하고 ' +
+      '바로 반환한다 — 실제 기획+이미지 생성은 워커(npm run worker)가 처리하므로, PC가 켜져 있고 워커가 돌고 있어야 완성된다. ' +
+      'get_cardnews_status(projectId)로 진행 상황을 확인할 것.',
+    inputSchema: {
+      topic: z.string().describe('카드뉴스 주제(예: "퇴근 후 30분 홈트 루틴")'),
+      cardCount: z.number().int().min(3).max(10).optional().describe('카드 수, 기본 6'),
+      styleSetId: z.string().optional().describe('create_image_style_set으로 미리 저장해둔 스타일 세트 id(화풍/톤 일관성용, 선택)'),
+    },
+  },
+  async ({ topic, cardCount, styleSetId }) => {
+    try {
+      const { data, error } = await supabase
+        .from('cardnews_projects')
+        .insert({ topic, card_count: cardCount || 6, style_set_id: styleSetId || null, status: 'queued' })
+        .select()
+        .single();
+      if (error) throw new Error(`프로젝트 생성 실패: ${error.message}`);
+      return textResult({ projectId: data.id, status: 'queued', note: '워커가 처리 중입니다. get_cardnews_status(projectId)로 진행 상황을 확인하세요.' });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
+  'get_cardnews_status',
+  {
+    description: '카드뉴스 프로젝트의 진행 상태(stage/status/카드별 이미지 URL)를 조회한다.',
+    inputSchema: { projectId: z.string() },
+  },
+  async ({ projectId }) => {
+    try {
+      const { data, error } = await supabase.from('cardnews_projects').select('*').eq('id', projectId).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new Error(`프로젝트를 찾을 수 없습니다: ${projectId}`);
+      return textResult({ status: data.status, stage: data.stage, errorMessage: data.error_message, cards: data.cards });
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+server.registerTool(
   'list_options',
   {
     description: 'create_shorts/upsert_row에 쓸 수 있는 유효한 값 목록(레이아웃, 자막 프리셋, provider, 스타일, 언어 등)을 보여준다.',

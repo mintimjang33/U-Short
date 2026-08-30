@@ -20,6 +20,7 @@ export default async function AppLayout({ children }) {
           <a href="/templates/gallery">템플릿 갤러리</a>
           <a href="/image-styles">캐릭터/화풍 스타일</a>
           <a href="/instatoon">인스타툰</a>
+          <a href="/cardnews">카드뉴스</a>
           <a href="/video-edit">숏폼/롱폼 편집</a>
           <a href="/ai-influencer">AI 인플루언서</a>
           <a href="/settings">자동화 기본값</a>

@@ -22,6 +22,7 @@ const { runPipeline, runSceneUpdateRender, runVoiceUpdateRender, runVideoEditPip
 // 기존 jobs 처리 로직(pickNextQueuedJob 등)은 전혀 건드리지 않는다.
 const { runCutDaeriRender } = await import('../lib/cutDaeriPipeline.js');
 const { runInstatoonPipeline } = await import('../lib/instatoonPipeline.js');
+const { runCardnewsPipeline } = await import('../lib/cardnewsPipeline.js');
 
 const POLL_INTERVAL_MS = 5000;
 let running = true;
@@ -91,9 +92,24 @@ async function pickNextInstatoonProject(supabase) {
   return data;
 }
 
+async function pickNextCardnewsProject(supabase) {
+  const { data, error } = await supabase
+    .from('cardnews_projects')
+    .select('id, topic')
+    .eq('status', 'queued')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('[worker] 카드뉴스 프로젝트 조회 실패:', error.message);
+    return null;
+  }
+  return data;
+}
+
 async function main() {
   const supabase = getSupabaseServerClient();
-  console.log('[worker] 시작됨. 5초마다 queued job / 컷대리 렌더링 / 인스타툰 대기열을 확인합니다. (Ctrl+C로 종료)');
+  console.log('[worker] 시작됨. 5초마다 queued job / 컷대리 렌더링 / 인스타툰·카드뉴스 대기열을 확인합니다. (Ctrl+C로 종료)');
 
   while (running) {
     const job = await pickNextQueuedJob(supabase);
@@ -148,6 +164,18 @@ async function main() {
         console.log(`[worker] 인스타툰 생성 완료: ${instatoonProject.id}`);
       } catch (err) {
         console.error(`[worker] 인스타툰 생성 중 예외: ${instatoonProject.id}`, err);
+      }
+      continue;
+    }
+
+    const cardnewsProject = await pickNextCardnewsProject(supabase);
+    if (cardnewsProject) {
+      console.log(`[worker] 카드뉴스 생성 시작: ${cardnewsProject.topic} (${cardnewsProject.id})`);
+      try {
+        await runCardnewsPipeline({ projectId: cardnewsProject.id });
+        console.log(`[worker] 카드뉴스 생성 완료: ${cardnewsProject.id}`);
+      } catch (err) {
+        console.error(`[worker] 카드뉴스 생성 중 예외: ${cardnewsProject.id}`, err);
       }
       continue;
     }
