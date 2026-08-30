@@ -15,6 +15,19 @@ export const GET = withApiErrorHandling(async (request) => {
   if (!checkAuth(request)) return NextResponse.json({ error: '인증 실패' }, { status: 401 });
 
   const supabase = getSupabaseServerClient();
+
+  // 이미 'claimed'(진행 중 = 사용자의 실제 클릭을 기다리는 중)인 작업이 있으면 새로 안 준다.
+  // 없으면 확장 프로그램이 6초마다 새 작업을 계속 밀어넣어서, 아직 사용자가 못 누른 이전
+  // 프롬프트를 다음 작업이 덮어써버리는 문제가 실제로 발생했다(라이브 테스트로 확인함).
+  const { data: inProgress, error: inProgressError } = await supabase
+    .from('flow_generation_tasks')
+    .select('id')
+    .eq('status', 'claimed')
+    .limit(1)
+    .maybeSingle();
+  if (inProgressError) return NextResponse.json({ error: inProgressError.message }, { status: 500 });
+  if (inProgress) return NextResponse.json({ task: null });
+
   const { data: pending, error } = await supabase
     .from('flow_generation_tasks')
     .select('*')
