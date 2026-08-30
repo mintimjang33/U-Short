@@ -23,6 +23,7 @@ const { runPipeline, runSceneUpdateRender, runVoiceUpdateRender, runVideoEditPip
 const { runCutDaeriRender } = await import('../lib/cutDaeriPipeline.js');
 const { runInstatoonPipeline } = await import('../lib/instatoonPipeline.js');
 const { runCardnewsPipeline } = await import('../lib/cardnewsPipeline.js');
+const { processNextPendingFlowTask } = await import('../lib/generateImageViaFlow.js');
 
 const POLL_INTERVAL_MS = 5000;
 let running = true;
@@ -178,6 +179,18 @@ async function main() {
         console.error(`[worker] 카드뉴스 생성 중 예외: ${cardnewsProject.id}`, err);
       }
       continue;
+    }
+
+    // Google Flow 이미지 생성(puppeteer-core로 실제 크롬 조작, 완전자동). 크롬 창이 뜨는
+    // 작업이라 다른 job들과 마찬가지로 한 번에 하나씩만 순차 처리한다.
+    try {
+      const flowResult = await processNextPendingFlowTask(supabase);
+      if (flowResult) {
+        console.log(`[worker] Flow 이미지 생성 ${flowResult.status}: ${flowResult.id}${flowResult.error ? ' - ' + flowResult.error : ''}`);
+        continue;
+      }
+    } catch (err) {
+      console.error('[worker] Flow 작업 처리 중 예외:', err);
     }
 
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
