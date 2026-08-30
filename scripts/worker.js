@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
 
 const { getSupabaseServerClient } = await import('../lib/supabase.js');
-const { runPipeline, runSceneUpdateRender, runVoiceUpdateRender, runVideoEditPipeline } = await import('../lib/pipeline.js');
+const { runPipeline, runSceneUpdateRender, runVoiceUpdateRender, runVideoEditPipeline, runAiInfluencerVideo } = await import('../lib/pipeline.js');
 // U-OneShot 컷대리(별도 Next.js 앱, 같은 Supabase 프로젝트 공유)용 — uos_cutdaeri_projects는
 // 이 워커의 jobs/projects 테이블과 무관한 독립 테이블이라 큐잉 방식만 폴링에 추가하고,
 // 기존 jobs 처리 로직(pickNextQueuedJob 등)은 전혀 건드리지 않는다.
@@ -56,6 +56,21 @@ async function pickNextCutDaeriProject(supabase) {
     .maybeSingle();
   if (error) {
     console.error('[worker] 컷대리 프로젝트 조회 실패:', error.message);
+    return null;
+  }
+  return data;
+}
+
+async function pickNextAiInfluencerVideo(supabase) {
+  const { data, error } = await supabase
+    .from('ai_influencer_videos')
+    .select('id, topic')
+    .eq('status', 'queued')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error('[worker] AI 인플루언서 영상 조회 실패:', error.message);
     return null;
   }
   return data;
@@ -109,6 +124,18 @@ async function main() {
         console.log(`[worker] 컷대리 렌더링 완료: ${videoUrl}`);
       } catch (err) {
         console.error(`[worker] 컷대리 렌더링 중 예외: ${cutDaeriProject.id}`, err);
+      }
+      continue;
+    }
+
+    const influencerVideo = await pickNextAiInfluencerVideo(supabase);
+    if (influencerVideo) {
+      console.log(`[worker] AI 인플루언서 영상 생성 시작: ${influencerVideo.topic} (${influencerVideo.id})`);
+      try {
+        await runAiInfluencerVideo({ videoRowId: influencerVideo.id });
+        console.log(`[worker] AI 인플루언서 영상 생성 완료: ${influencerVideo.id}`);
+      } catch (err) {
+        console.error(`[worker] AI 인플루언서 영상 생성 중 예외: ${influencerVideo.id}`, err);
       }
       continue;
     }

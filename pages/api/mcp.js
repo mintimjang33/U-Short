@@ -204,6 +204,88 @@ function buildServer() {
   );
 
   server.registerTool(
+    'create_ai_influencer',
+    {
+      title: 'AI 인플루언서 페르소나 저장',
+      description: '이름+얼굴사진+음성으로 페르소나를 저장한다. generate_influencer_video로 재사용 가능.',
+      inputSchema: {
+        name: z.string(),
+        referenceImageUrl: z.string(),
+        voice: z.enum(['Aria', 'Roger', 'Sarah', 'Laura', 'Charlie', 'George', 'Callum', 'River', 'Liam', 'Charlotte', 'Alice', 'Matilda', 'Will', 'Jessica', 'Eric', 'Chris', 'Brian', 'Daniel', 'Lily', 'Bill']).optional(),
+        personality: z.string().optional(),
+      },
+    },
+    async ({ name, referenceImageUrl, voice, personality }) => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_influencers')
+          .insert({ name, reference_image_url: referenceImageUrl, voice: voice || 'Aria', personality: personality || null })
+          .select()
+          .single();
+        if (error) throw new Error(`저장 실패: ${error.message}`);
+        return textResult(data);
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'list_ai_influencers',
+    { title: '저장된 AI 인플루언서 목록', description: 'create_ai_influencer로 저장해둔 페르소나 목록.' },
+    async () => {
+      try {
+        const { data, error } = await supabase.from('ai_influencers').select('*').order('created_at', { ascending: false });
+        if (error) throw new Error(error.message);
+        return textResult(data);
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'generate_influencer_video',
+    {
+      title: 'AI 인플루언서 영상 생성 (큐에 등록)',
+      description: '페르소나가 주제에 맞는 대본을 말하는 립싱크 영상을 생성 요청한다. 실제 처리는 PC 워커가 담당.',
+      inputSchema: { influencerId: z.string(), topic: z.string() },
+    },
+    async ({ influencerId, topic }) => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_influencer_videos')
+          .insert({ influencer_id: influencerId, topic, status: 'queued' })
+          .select()
+          .single();
+        if (error) throw new Error(`요청 생성 실패: ${error.message}`);
+        return textResult({ videoId: data.id, status: 'queued', note: 'PC의 워커(npm run worker)가 켜져 있어야 처리됩니다.' });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    'get_influencer_video_status',
+    {
+      title: 'AI 인플루언서 영상 진행 상태',
+      description: '영상 생성 요청의 상태/URL/에러를 조회한다.',
+      inputSchema: { videoId: z.string() },
+    },
+    async ({ videoId }) => {
+      try {
+        const { data, error } = await supabase.from('ai_influencer_videos').select('*').eq('id', videoId).maybeSingle();
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error(`찾을 수 없습니다: ${videoId}`);
+        return textResult({ status: data.status, videoUrl: data.video_url, narration: data.narration, errorMessage: data.error_message });
+      } catch (err) {
+        return errorResult(err);
+      }
+    }
+  );
+
+  server.registerTool(
     'create_video_edit',
     {
       title: '숏폼/롱폼 편집 요청 (큐에 등록)',
