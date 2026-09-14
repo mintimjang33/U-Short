@@ -141,12 +141,12 @@ server.registerTool(
       layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional().describe('기본 info'),
       captionPresetId: z.string().optional().describe('기본 existing-preset-bold-white-outline, list_options로 전체 목록 확인 가능'),
       scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional().describe('기본 claude'),
-      voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional().describe('기본 fal'),
+      voiceProvider: z.enum(['fal', 'elevenlabs', 'clova', 'gemini']).optional().describe('기본 fal. gemini는 무료 등급 있음(대신 한 번에 보낼 수 있는 텍스트가 약 2,500자로 제한됨 — 긴 대본은 씬 단위로 나눠서 여러 번 호출할 것)'),
       voice: z
-        .enum(['seoa', 'hajun', 'taeo', 'ina', 'doyun', 'jihoon', 'yuna', 'minjae', 'luna', 'harin', 'seojun', 'daon', 'mio', 'haru', 'ren', 'oliver', 'noah', 'emma', 'liam', 'ava', 'chloe', 'adam', 'jay'])
+        .string()
         .optional()
-        .describe('음성 페르소나(voiceProvider가 fal일 때만 적용). 생략시 기본 보이스. list_options의 voicePresets로 이름/설명 확인 가능'),
-      voiceSpeed: z.number().min(0.7).max(1.2).optional().describe('재생 속도, 0.7(느림)~1.2(빠름), 기본 1.0. fal/elevenlabs/clova 전부 지원'),
+        .describe('음성 페르소나. voiceProvider가 fal이면 seoa/hajun/taeo/ina/doyun/jihoon/yuna/minjae/luna/harin/seojun/daon/mio/haru/ren/oliver/noah/emma/liam/ava/chloe/adam/jay 중 하나(list_options의 voicePresets로 이름/설명 확인 가능), gemini면 Puck/Kore/Charon/Orus 등 Gemini TTS 프리셋 보이스 이름을 그대로 문자열로 지정. 생략시 기본 보이스'),
+      voiceSpeed: z.number().min(0.7).max(1.2).optional().describe('재생 속도, 0.7(느림)~1.2(빠름), 기본 1.0. fal/elevenlabs/clova 지원, gemini는 미지원(무시됨)'),
       backgroundColor: z.string().optional().describe('기본 #0a0a0a'),
       backgroundImageUrl: z.string().optional().describe('비우면 대표 이미지를 자동으로 씀 (videoMode:ai-generated면 무시됨)'),
       backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL (upload_asset으로 먼저 업로드)'),
@@ -487,8 +487,8 @@ server.registerTool(
       'wait=true(기본)면 완료까지 기다렸다가 새 영상 URL을 바로 돌려준다.',
     inputSchema: {
       projectId: z.string(),
-      voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional(),
-      voice: z.string().optional().describe('음성 페르소나(voiceProvider가 fal일 때만 적용)'),
+      voiceProvider: z.enum(['fal', 'elevenlabs', 'clova', 'gemini']).optional(),
+      voice: z.string().optional().describe('음성 페르소나(voiceProvider가 fal이면 프리셋 id, gemini면 Puck/Kore 등 Gemini TTS 보이스 이름)'),
       voiceSpeed: z.number().min(0.7).max(1.2).optional(),
       wait: z.boolean().optional().describe('기본 true'),
     },

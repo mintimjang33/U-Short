@@ -87,12 +87,12 @@ function buildServer() {
         layoutId: z.enum(['info', 'card', 'full-focused', 'image-dark', 'viral-mint']).optional(),
         captionPresetId: z.string().optional(),
         scriptProvider: z.enum(['claude', 'gemini', 'gpt']).optional(),
-        voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional(),
+        voiceProvider: z.enum(['fal', 'elevenlabs', 'clova', 'gemini']).optional().describe('gemini는 무료 등급 있음(1회 텍스트 약 2,500자 제한)'),
         voice: z
-          .enum(['seoa', 'hajun', 'taeo', 'ina', 'doyun', 'jihoon', 'yuna', 'minjae', 'luna', 'harin', 'seojun', 'daon', 'mio', 'haru', 'ren', 'oliver', 'noah', 'emma', 'liam', 'ava', 'chloe', 'adam', 'jay'])
+          .string()
           .optional()
-          .describe('음성 페르소나(voiceProvider가 fal일 때만 적용). list_options의 voicePresets로 확인 가능'),
-        voiceSpeed: z.number().min(0.7).max(1.2).optional().describe('재생 속도, 0.7(느림)~1.2(빠름), 기본 1.0'),
+          .describe('음성 페르소나. fal이면 seoa/hajun/taeo/ina/doyun/jihoon/yuna/minjae/luna/harin/seojun/daon/mio/haru/ren/oliver/noah/emma/liam/ava/chloe/adam/jay 중 하나(list_options의 voicePresets로 확인 가능), gemini면 Puck/Kore 등 Gemini TTS 보이스 이름'),
+        voiceSpeed: z.number().min(0.7).max(1.2).optional().describe('재생 속도, 0.7(느림)~1.2(빠름), 기본 1.0. gemini는 미지원'),
         backgroundColor: z.string().optional(),
         backgroundImageUrl: z.string().optional(),
         backgroundVideoUrl: z.string().optional().describe('viral-mint 레이아웃 전용, 인물 영상 URL'),
@@ -347,7 +347,7 @@ function buildServer() {
         'job을 큐에 넣기만 하고 바로 반환 — 실제 처리(음성+자막+렌더링)는 PC 워커가 담당.',
       inputSchema: {
         projectId: z.string(),
-        voiceProvider: z.enum(['fal', 'elevenlabs', 'clova']).optional(),
+        voiceProvider: z.enum(['fal', 'elevenlabs', 'clova', 'gemini']).optional(),
         voice: z.string().optional(),
         voiceSpeed: z.number().min(0.7).max(1.2).optional(),
       },
